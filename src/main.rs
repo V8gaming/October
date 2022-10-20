@@ -59,15 +59,19 @@ impl Application for Html {
         functions to ease the understanding and the portability to another language.
         You can read more about this lib here")
         .size(15);
-
+        
+        /*
         let mut state1 = button::State::new();
         let mut state2 = button::State::new();
         let mut state3 = button::State::new();
-        let menu1 = Button::new(state1, Text::new("Home")).on_press(Message::ButtonClicked);
-        let menu2 = Button::new(state2, Text::new("Curves")).on_press(Message::ButtonClicked);
-        let menu3 = Button::new(state3, Text::new("Contact")).on_press(Message::ButtonClicked);
-
-        let banner = Row::new().push(menu1).push(menu2).push(menu3);
+        let menu1 = Button::new(&mut state1, Text::new("Home")).on_press(Message::ButtonClicked);
+        let menu2 = Button::new(&mut state2, Text::new("Curves")).on_press(Message::ButtonClicked);
+        let menu3 = Button::new(&mut state3, Text::new("Contact")).on_press(Message::ButtonClicked);
+        */
+        let menu1 = Text::new("A").horizontal_alignment(iced::alignment::Horizontal::Left).width(Length::Fill);
+        let menu2 = Text::new("B").horizontal_alignment(iced::alignment::Horizontal::Center).width(Length::Fill);
+        let menu3 = Text::new("C").horizontal_alignment(iced::alignment::Horizontal::Right).width(Length::Fill);
+        let banner = Row::new().push(menu1).push(menu2).push(menu3).width(Length::Fill);
         //let content = Column::new().push(text1).push(text2).push(text3);
         
         let content = Column::new().push(banner).push(text1).push(text2).push(text3);
