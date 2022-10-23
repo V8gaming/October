@@ -1,12 +1,14 @@
 use std::io::Write;
 fn main() {
     let charlist: [&str; 26] = ["a","b","c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-    let charlist2: [&str; 20] = ["ẳ","á","â","à","ạ","ầ","ậ",
+    let charlist2: [&str; 20] = [
+    "ẳ","á","â","à","ạ","ầ","ậ",
     "Đ","đ",
     "ỏ","ơ","ờ","ồ","ó",
     "ư","ụ","ữ",
     "í",
-    "ế","ẹ"];
+    "ế","ẹ"
+    ];
 
     let mut file = std::fs::File::create("./src/bin/generated.rs").expect("create failed");
     file.write_all(format!("use iced::{{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window}};\n").as_bytes()).expect("write failed");

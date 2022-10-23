@@ -32,11 +32,12 @@ impl Sandbox for MyButton {
     }
 
     fn update(&mut self, message: Message) {
+        let mut letters: Vec<&str> = Vec::new();
         match message {
-            Message::ButtonPressed0 => println!("a"),
-            Message::ButtonPressed1 => println!("b"),
-            Message::ButtonPressed2 => println!("c"),
-            Message::ButtonPressed3 => println!("d"),
+            Message::ButtonPressed0 => letters.push("a"),
+            Message::ButtonPressed1 => letters.push("b"),
+            Message::ButtonPressed2 => letters.push("c"),
+            Message::ButtonPressed3 => letters.push("d"),
         }
     }
 
