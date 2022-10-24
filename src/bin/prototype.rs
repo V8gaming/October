@@ -2,10 +2,16 @@ use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, 
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
+use rand::{thread_rng, Rng};
 
 static LETTERS: Global<Vec<String>> = Global::new();
+static ENGLISH: Global<Vec<&str>> = Global::new();
+static VIETNAMESE: Global<Vec<&str>> = Global::new();
+static N: Global<Vec<usize>> = Global::new();
+
 #[derive(Default, Clone, Debug)]
 struct MyButton {
+    next_state: button::State,
     submit_state: button::State,
     space_state: button::State,
     delete_state: button::State,
@@ -17,6 +23,7 @@ struct MyButton {
 
 #[derive(Debug, Clone)]
 enum Message {
+    NextButton,
     SubmitButton,
     SpaceButton,
     DeleteButton,
@@ -34,8 +41,15 @@ fn pushfn(letter: &str) {
 
 fn sumbitfn() {
     println!("{:?}",LETTERS.lock_mut().unwrap().concat());
-    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == "dad"{
+    let vietnamese = ["của chị ấy","vâng","có thể","không thể",];
+    for i in vietnamese {
+        VIETNAMESE.lock_mut().unwrap().push(i)
+    }
+    
+    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
         println!("true")
+    } else {
+        println!("false")
     }
 }
 
@@ -45,6 +59,10 @@ fn popfn() {
         println!("{}",LETTERS.lock_mut().unwrap().concat());
     } 
     
+}
+
+fn nextfn() {
+    N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
 }
 
 impl Sandbox for MyButton {
@@ -64,6 +82,7 @@ impl Sandbox for MyButton {
             Message::SubmitButton => sumbitfn(),
             Message::SpaceButton => pushfn(" "),
             Message::DeleteButton => popfn(),
+            Message::NextButton => nextfn(),
             Message::ButtonPressed0 => pushfn("a"),
             Message::ButtonPressed1 => pushfn("b"),
             Message::ButtonPressed2 => pushfn("c"),
@@ -78,8 +97,16 @@ impl Sandbox for MyButton {
         fn add_button<'a>(a: &'a mut button::State,b: &'a str,c: Message) -> Button<'a, Message> {
             return Button::new(a, Text::new(format!("{}",b))).on_press(c);
         }
-        
-        let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(250)).size(100);
+       
+
+        let english = ["hers","yes","can","can not"];
+        for i in english {
+            ENGLISH.lock_mut().unwrap().push(i)
+        }
+
+        let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150)).size(80);
+
+        let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80);
 
         /* 
         let mut buttons: Vec<Button<Message>> = Vec::new();
@@ -107,17 +134,18 @@ impl Sandbox for MyButton {
         let submit = add_button(&mut self.submit_state, "submit", Message::SubmitButton);
         let space = add_button(&mut self.space_state, "space", Message::SpaceButton);
         let delete = add_button(&mut self.delete_state, "delete", Message::DeleteButton);
-        
+        let next = add_button(&mut self.next_state, "next", Message::NextButton);
 
         let mut userrow = Row::new();
-        userrow = userrow.push(submit).push(space).push(delete);
+        userrow = userrow.push(submit).push(space).push(delete).push(next);
 
 
         let mut row1 = Row::new();
         for button in buttons {
             row1 = row1.push(button);
         };
-        let column1 = Column::new().push(text1).push(userrow).push(row1).width(Length::Fill).align_items(iced::Alignment::Center);
+
+        let column1 = Column::new().push(english).push(text1).push(userrow).push(row1).width(Length::Fill).align_items(iced::Alignment::Center);
         Container::new(column1)
             .padding(100)
             .width(Length::Fill)
@@ -132,6 +160,7 @@ impl Sandbox for MyButton {
 
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
+    N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
             size: (800, 600),

@@ -2,7 +2,11 @@ use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, 
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
+use rand::{thread_rng, Rng};
 static LETTERS: Global<Vec<String>> = Global::new();
+static ENGLISH: Global<Vec<&str>> = Global::new();
+static VIETNAMESE: Global<Vec<&str>> = Global::new();
+static N: Global<Vec<usize>> = Global::new();
 
 #[derive(Default, Clone)]
 struct MyButton {
@@ -131,7 +135,15 @@ fn pushfn(letter: &str) {
     println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
 }
 fn sumbitfn() {
-    println!("{}",LETTERS.lock_mut().unwrap().concat());
+    let vietnamese = ["của chị ấy","vâng","có thể","không thể",];
+    for i in vietnamese {
+        VIETNAMESE.lock_mut().unwrap().push(i)
+    }
+    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
+        println!("true")
+    } else {
+        println!("false")
+    }
 }
 fn popfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
@@ -216,7 +228,12 @@ impl Sandbox for MyButton {
           return Button::new(a, Text::new(format!("{}",b))).on_press(c);
 
       }
-    let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(250)).size(100);
+        let english = ["hers","yes","can","can not"];
+        for i in english {
+            ENGLISH.lock_mut().unwrap().push(i)
+        }
+        let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150)).size(80);
+    let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80);
     let buttons1 = [
         add_button(&mut self.button_state0, "a", Message::ButtonPressed0),
         add_button(&mut self.button_state1, "b", Message::ButtonPressed1),
@@ -291,7 +308,7 @@ impl Sandbox for MyButton {
     for button in buttons2 {
         row2 = row2.push(button);
     };
-    let column1 = Column::new().push(text1).push(userrow).push(row1).push(row2).width(Length::Fill).align_items(iced::Alignment::Center);
+    let column1 = Column::new().push(english).push(text1).push(userrow).push(row1).push(row2).width(Length::Fill).align_items(iced::Alignment::Center);
     Container::new(column1)
     .padding(100)
     .width(Length::Fill)
@@ -303,6 +320,7 @@ impl Sandbox for MyButton {
 }
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
+        N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
             size: (800, 600),resizable: true,decorations: true,min_size: Some((100 as u32,100 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),        },default_font: Some(include_bytes!("../../resources/Arial Unicode MS Font.ttf")),antialiasing: true,id: Some("buttons".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,

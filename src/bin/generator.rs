@@ -30,9 +30,21 @@ fn main() {
     file.write_all(format!("use iced::window::Position::Specific;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced::window::Icon;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use global::Global;\n").as_bytes()).expect("write failed");
+    file.write_all(format!("use rand::{{thread_rng, Rng}};\n").as_bytes()).expect("write failed");
     
     // static LETTERS: Global<Vec<String>> = Global::new();
     file.write_all(format!("static LETTERS: Global<Vec<String>> = Global::new();\n").as_bytes()).expect("write failed");
+
+    /*
+    static ENGLISH: Global<Vec<&str>> = Global::new();
+    static VIETNAMESE: Global<Vec<&str>> = Global::new();
+    static N: Global<Vec<usize>> = Global::new();
+    */
+
+    file.write_all(format!("static ENGLISH: Global<Vec<&str>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static VIETNAMESE: Global<Vec<&str>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static N: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
+
 
     file.write_all("\n".as_bytes()).expect("write failed");
     file.write_all(format!("#[derive(Default, Clone)]\nstruct MyButton {{\n").as_bytes()).expect("write failed");
@@ -72,11 +84,30 @@ fn main() {
 
     /* 
     fn sumbitfn() {
-        println!("{}",LETTERS.lock_mut().unwrap().concat());
+        println!("{:?}",LETTERS.lock_mut().unwrap().concat());
+        let vietnamese = ["của chị ấy","vâng","có thể","không thể",];
+        for i in vietnamese {
+            VIETNAMESE.lock_mut().unwrap().push(i)
+        }
+        
+        if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
+            println!("true")
+        } else {
+            println!("false")
+        }
     }
     */
     file.write_all("fn sumbitfn() {\n".as_bytes()).expect("write failed");
-    file.write_all("    println!(\"{}\",LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
+    file.write_all("    let vietnamese = [\"của chị ấy\",\"vâng\",\"có thể\",\"không thể\",];\n".as_bytes()).expect("write failed");
+    file.write_all("    for i in vietnamese {\n".as_bytes()).expect("write failed");
+    file.write_all("        VIETNAMESE.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
+    file.write_all("    if format!(\"{}\", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{\n".as_bytes()).expect("write failed");
+    file.write_all("        println!(\"true\")\n".as_bytes()).expect("write failed");
+    file.write_all("    } else {\n".as_bytes()).expect("write failed");
+    file.write_all("        println!(\"false\")\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
     /* 
@@ -126,10 +157,16 @@ fn main() {
     file.write_all("\n     fn add_button<'a>(a: &'a mut button::State,b: &'a str,c: Message) -> Button<'a, Message> {\n".as_bytes()).expect("write failed");
     file.write_all("\n          return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
     file.write_all("\n      }\n".as_bytes()).expect("write failed");
+    
+    file.write_all("        let english = [\"hers\",\"yes\",\"can\",\"can not\"];\n".as_bytes()).expect("write failed");
+    file.write_all("        for i in english {\n".as_bytes()).expect("write failed");
+    file.write_all("            ENGLISH.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
+    file.write_all("        }\n".as_bytes()).expect("write failed");
 
+    file.write_all("        let english = Text::new(format!(\"{}\",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150)).size(80);\n".as_bytes()).expect("write failed");
     // text1
     // let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(250)).size(100);
-    file.write_all("    let text1 = Text::new(format!(\"{}\", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(250)).size(100);\n".as_bytes()).expect("write failed");
+    file.write_all("    let text1 = Text::new(format!(\"{}\", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80);\n".as_bytes()).expect("write failed");
 
     // button1
     file.write_all("    let buttons1 = [\n".as_bytes()).expect("write failed");
@@ -170,7 +207,7 @@ fn main() {
     file.write_all("        row2 = row2.push(button);\n".as_bytes()).expect("write failed");
     file.write_all("    };\n".as_bytes()).expect("write failed");
 
-    file.write_all("    let column1 = Column::new().push(text1).push(userrow).push(row1).push(row2).width(Length::Fill).align_items(iced::Alignment::Center);\n".as_bytes()).expect("write failed");
+    file.write_all("    let column1 = Column::new().push(english).push(text1).push(userrow).push(row1).push(row2).width(Length::Fill).align_items(iced::Alignment::Center);\n".as_bytes()).expect("write failed");
     file.write_all("    Container::new(column1)\n".as_bytes()).expect("write failed");
     file.write_all("    .padding(100)\n    .width(Length::Fill)\n    .height(Length::Fill)\n    .center_x()\n    .center_y()\n    .into()".as_bytes()).expect("write failed");
 
@@ -178,8 +215,9 @@ fn main() {
     file.write_all("}\n".as_bytes()).expect("write failed");
 
     file.write_all("fn main() -> iced::Result {\n".as_bytes()).expect("write failed");
-
     file.write_all("    let rgba = vec![0, 0, 0, 255];\n".as_bytes()).expect("write failed");
+    file.write_all("        N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));\n".as_bytes()).expect("write failed");
+
     file.write_all("    let setting: iced::Settings<()> = Settings {\n".as_bytes()).expect("write failed");
     file.write_all("        window: window::Settings {\n".as_bytes()).expect("write failed");
 
