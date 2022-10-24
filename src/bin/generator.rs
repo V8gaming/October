@@ -184,7 +184,7 @@ fn main() {
     file.write_all("        window: window::Settings {\n".as_bytes()).expect("write failed");
 
     file.write_all("            size: (800, 600),resizable: true,decorations: true,min_size: Some((100 as u32,100 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),".as_bytes()).expect("write failed");
-    file.write_all("        },default_font: Some(include_bytes!(\"../../resources/Arial Unicode MS Font.ttf\")),antialiasing: true,id: Some(\"buttons\".to_string()),flags: (),default_text_size: 20,text_multithreading: false,exit_on_close_request: true,try_opengles_first: false,\n".as_bytes()).expect("write failed");
+    file.write_all("        },default_font: Some(include_bytes!(\"../../resources/Arial Unicode MS Font.ttf\")),antialiasing: true,id: Some(\"buttons\".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,\n".as_bytes()).expect("write failed");
 
     file.write_all("    };\n".as_bytes()).expect("write failed");
     file.write_all("    MyButton::run(setting)\n".as_bytes()).expect("write failed");

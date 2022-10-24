@@ -4,7 +4,7 @@ use iced::window::Icon;
 use global::Global;
 
 static LETTERS: Global<Vec<String>> = Global::new();
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 struct MyButton {
     submit_state: button::State,
     space_state: button::State,
@@ -33,7 +33,10 @@ fn pushfn(letter: &str) {
 }
 
 fn sumbitfn() {
-    println!("{}",LETTERS.lock_mut().unwrap().concat());
+    println!("{:?}",LETTERS.lock_mut().unwrap().concat());
+    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == "dad"{
+        println!("true")
+    }
 }
 
 fn popfn() {
@@ -146,9 +149,10 @@ fn main() -> iced::Result {
         id: Some("buttons".to_string()),
         flags: (),
         default_text_size: 20,
-        text_multithreading: false,
+        text_multithreading: true,
         exit_on_close_request: true,
         try_opengles_first: false,
     };
     MyButton::run(setting)
 }
+
