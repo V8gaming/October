@@ -10,13 +10,13 @@ fn some_kind_of_uppercase_first_letter(s: &str) -> String {
 
 fn main() {
     let charlist: [&str; 26] = ["a","b","c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-    let charlist2: [&str; 20] = [
-    "ẳ","á","â","à","ạ","ầ","ậ",
-    "Đ","đ",
-    "ỏ","ơ","ờ","ồ","ó",
-    "ư","ụ","ữ",
-    "í",
-    "ế","ẹ"
+    let charlist2: [&str; 29] = [
+    "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
+    "đ",
+    "ỏ","ơ","ờ","ồ","ó","ô","ọ",
+    "ư","ụ","ữ","ú", "ủ",
+    "í","ì","ị",
+    "ế","ẹ", "ể"
     ];
     let customstates: [&str; 3] = ["submit","space","delete"];
     let customfunctions: [&str; 3] = ["sumbitfn()", "pushfn(\" \")",  "popfn()"];
@@ -25,7 +25,7 @@ fn main() {
         custombuttons.push(some_kind_of_uppercase_first_letter(i).to_owned())
     }
     
-    let mut file = std::fs::File::create("./src/bin/generated.rs").expect("create failed");
+    let mut file = std::fs::File::create("./src/bin/main.rs").expect("create failed");
     file.write_all(format!("use iced::{{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window}};\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced::window::Position::Specific;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced::window::Icon;\n").as_bytes()).expect("write failed");
