@@ -18,8 +18,8 @@ fn main() {
     "í","ì","ị",
     "ế","ẹ", "ể"
     ];
-    let customstates: [&str; 3] = ["submit","space","delete"];
-    let customfunctions: [&str; 3] = ["sumbitfn()", "pushfn(\" \")",  "popfn()"];
+    let customstates: [&str; 4] = ["submit","space","delete","next"];
+    let customfunctions: [&str; 4] = ["sumbitfn()", "pushfn(\" \")",  "popfn()", "nextfn()"];
     let mut custombuttons = Vec::new();
     for i in customstates {
         custombuttons.push(some_kind_of_uppercase_first_letter(i).to_owned())
@@ -123,6 +123,15 @@ fn main() {
     file.write_all("        LETTERS.lock_mut().unwrap().pop();\n".as_bytes()).expect("write failed");
     file.write_all("        println!(\"{}\",LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
     file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
+    /*
+    fn nextfn() {
+        N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
+    }
+    */
+    file.write_all("fn nextfn() {\n".as_bytes()).expect("write failed");
+    file.write_all("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
     // impl Sandbox for MyButton

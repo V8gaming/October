@@ -13,6 +13,7 @@ struct MyButton {
     submit_state: button::State,
     space_state: button::State,
     delete_state: button::State,
+    next_state: button::State,
     button_state0: button::State,
     button_state1: button::State,
     button_state2: button::State,
@@ -74,6 +75,7 @@ struct MyButton {
     SubmitButton,
     SpaceButton,
     DeleteButton,
+    NextButton,
     ButtonPressed0,
     ButtonPressed1,
     ButtonPressed2,
@@ -151,6 +153,9 @@ fn popfn() {
         println!("{}",LETTERS.lock_mut().unwrap().concat());
     }
 }
+fn nextfn() {
+N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
+}
 impl Sandbox for MyButton {
     type Message = Message;
    fn new() -> Self {
@@ -164,6 +169,7 @@ impl Sandbox for MyButton {
       Message::SubmitButton => sumbitfn(),
       Message::SpaceButton => pushfn(" "),
       Message::DeleteButton => popfn(),
+      Message::NextButton => nextfn(),
         Message::ButtonPressed0 => pushfn("a"),
         Message::ButtonPressed1 => pushfn("b"),
         Message::ButtonPressed2 => pushfn("c"),
@@ -296,10 +302,12 @@ impl Sandbox for MyButton {
     let submit = add_button(&mut self.submit_state, "submit", Message::SubmitButton);
     let space = add_button(&mut self.space_state, "space", Message::SpaceButton);
     let delete = add_button(&mut self.delete_state, "delete", Message::DeleteButton);
+    let next = add_button(&mut self.next_state, "next", Message::NextButton);
     let mut userrow = Row::new();
     userrow = userrow.push(submit);
     userrow = userrow.push(space);
     userrow = userrow.push(delete);
+    userrow = userrow.push(next);
     let mut row1 = Row::new();
     for button in buttons1 {
         row1 = row1.push(button);
