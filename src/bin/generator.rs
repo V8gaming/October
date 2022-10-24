@@ -128,10 +128,12 @@ fn main() {
     /*
     fn nextfn() {
         N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
+        LETTERS.lock_mut().unwrap().clear();
     }
     */
     file.write_all("fn nextfn() {\n".as_bytes()).expect("write failed");
     file.write_all("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);\n".as_bytes()).expect("write failed");
+    file.write_all("LETTERS.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
     // impl Sandbox for MyButton

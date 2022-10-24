@@ -63,6 +63,7 @@ fn popfn() {
 
 fn nextfn() {
     N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
+    LETTERS.lock_mut().unwrap().clear();
 }
 
 impl Sandbox for MyButton {
