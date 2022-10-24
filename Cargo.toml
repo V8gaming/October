@@ -11,4 +11,4 @@ iced_wgpu = { features = ["webgl"] }
 iced_native = "0.5.1"
 iced_graphics = "0.3.1"
 env_logger = "0.8"
-
+global = "0.4.3"
