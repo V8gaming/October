@@ -1,4 +1,4 @@
-use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window};
+use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window, Color};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
@@ -7,6 +7,7 @@ static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<&str>> = Global::new();
 static VIETNAMESE: Global<Vec<&str>> = Global::new();
 static N: Global<Vec<usize>> = Global::new();
+static COLOUR: Global<Vec<usize>> = Global::new();
 
 #[derive(Default, Clone)]
 struct MyButton {
@@ -135,6 +136,7 @@ struct MyButton {
 fn pushfn(letter: &str) {
     LETTERS.lock_mut().unwrap().push(letter.to_string());
     println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
+        COLOUR.lock_mut().unwrap()[0] = 0
 }
 fn sumbitfn() {
     let vietnamese = ["của chị ấy","vâng","có thể","không thể",];
@@ -142,8 +144,10 @@ fn sumbitfn() {
         VIETNAMESE.lock_mut().unwrap().push(i)
     }
     if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
+        COLOUR.lock_mut().unwrap()[0] = 2;
         println!("true")
     } else {
+        COLOUR.lock_mut().unwrap()[0] = 1;
         println!("false")
     }
 }
@@ -151,11 +155,13 @@ fn popfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().pop();
         println!("{}",LETTERS.lock_mut().unwrap().concat());
+        COLOUR.lock_mut().unwrap()[0] = 0
     }
 }
 fn nextfn() {
 N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
 LETTERS.lock_mut().unwrap().clear();
+COLOUR.lock_mut().unwrap()[0] = 0
 }
 impl Sandbox for MyButton {
     type Message = Message;
@@ -230,17 +236,18 @@ impl Sandbox for MyButton {
     }
 
   fn view(&mut self) -> Element<Message> {
-     fn add_button<'a>(a: &'a mut button::State,b: &'a str,c: Message) -> Button<'a, Message> {
+      fn add_button<'a>(a: &'a mut button::State,b: &'a str,c: Message) -> Button<'a, Message> {
 
           return Button::new(a, Text::new(format!("{}",b))).on_press(c);
 
       }
         let english = ["hers","yes","can","can not"];
         for i in english {
-            ENGLISH.lock_mut().unwrap().push(i)
+           ENGLISH.lock_mut().unwrap().push(i)
         }
         let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150)).size(80);
-    let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80);
+        let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
+        let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80).color(colours[COLOUR.lock_mut().unwrap()[0]]);
     let buttons1 = [
         add_button(&mut self.button_state0, "a", Message::ButtonPressed0),
         add_button(&mut self.button_state1, "b", Message::ButtonPressed1),
@@ -329,7 +336,8 @@ impl Sandbox for MyButton {
 }
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
-        N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));
+    N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));
+    COLOUR.lock_mut().unwrap().push(0);
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
             size: (800, 600),resizable: true,decorations: true,min_size: Some((100 as u32,100 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),        },default_font: Some(include_bytes!("../../resources/Arial Unicode MS Font.ttf")),antialiasing: true,id: Some("buttons".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,
