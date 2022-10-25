@@ -101,7 +101,7 @@ fn main() {
     }
     */
     file.write_all("fn sumbitfn() {\n".as_bytes()).expect("write failed");
-    file.write_all("    let vietnamese = [\"của chị ấy\",\"vâng\",\"có thể\",\"không thể\",];\n".as_bytes()).expect("write failed");
+    file.write_all("    let vietnamese = [\"của chị ấy\",\"vâng\",\"có thể\",\"không thể\",\"làm\",\"ở\",\"với\"];\n".as_bytes()).expect("write failed");
     file.write_all("    for i in vietnamese {\n".as_bytes()).expect("write failed");
     file.write_all("        VIETNAMESE.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
     file.write_all("    }\n".as_bytes()).expect("write failed");
@@ -140,7 +140,7 @@ fn main() {
     }
     */
     file.write_all("fn nextfn() {\n".as_bytes()).expect("write failed");
-    file.write_all("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);\n".as_bytes()).expect("write failed");
+    file.write_all("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..7);\n".as_bytes()).expect("write failed");
     file.write_all("LETTERS.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
     file.write_all("COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
@@ -178,7 +178,7 @@ fn main() {
     file.write_all("\n          return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
     file.write_all("\n      }\n".as_bytes()).expect("write failed");
     
-    file.write_all("        let english = [\"hers\",\"yes\",\"can\",\"can not\"];\n".as_bytes()).expect("write failed");
+    file.write_all("        let english = [\"hers\",\"yes\",\"can\",\"can not\", \"to do\", \"at\", \"with\"];\n".as_bytes()).expect("write failed");
     file.write_all("        for i in english {\n".as_bytes()).expect("write failed");
     file.write_all("           ENGLISH.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
     file.write_all("        }\n".as_bytes()).expect("write failed");
@@ -238,7 +238,7 @@ fn main() {
 
     file.write_all("fn main() -> iced::Result {\n".as_bytes()).expect("write failed");
     file.write_all("    let rgba = vec![0, 0, 0, 255];\n".as_bytes()).expect("write failed");
-    file.write_all("    N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));\n".as_bytes()).expect("write failed");
+    file.write_all("    N.lock_mut().unwrap().push(thread_rng().gen_range(0..7));\n".as_bytes()).expect("write failed");
     file.write_all("    COLOUR.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
 
 

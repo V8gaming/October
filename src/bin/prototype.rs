@@ -1,13 +1,8 @@
-use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window, keyboard, Color};
+use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window, Color};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
-use winit::event::{Event, VirtualKeyCode};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit_input_helper::WinitInputHelper;
-use iced_native::Shell;
-
 
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<&str>> = Global::new();
