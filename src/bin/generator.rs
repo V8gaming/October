@@ -1,4 +1,5 @@
 use std::io::Write;
+use sqlite::State;
 
 fn some_kind_of_uppercase_first_letter(s: &str) -> String {
     let mut c = s.chars();
@@ -9,8 +10,23 @@ fn some_kind_of_uppercase_first_letter(s: &str) -> String {
 }
 
 fn main() {
-    let charlist: [&str; 26] = ["a","b","c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-    let charlist2: [&str; 29] = [
+    let connection = sqlite::open("./English-Vietnamese.sqlite3").unwrap();
+    
+    let mut vietnamese: Vec<String> = Vec::new();
+    let mut english: Vec<String> = Vec::new();
+
+    let mut statement = connection
+        .prepare("SELECT * FROM Prepositions")
+        .unwrap();
+
+    while let Ok(State::Row) = statement.next() {
+        println!("{} = {}", statement.read::<String>(0).unwrap(), statement.read::<String>(1).unwrap());
+        english.push(statement.read::<String>(0).unwrap());
+        vietnamese.push(statement.read::<String>(1).unwrap());
+    }
+
+    let latinletters: [&str; 26] = ["a","b","c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+    let vietnamesletters: [&str; 29] = [
     "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
     "đ",
     "ỏ","ơ","ờ","ồ","ó","ô","ọ",
@@ -18,6 +34,17 @@ fn main() {
     "í","ì","ị",
     "ế","ẹ", "ể"
     ];
+    let punctuation: [&str; 8] = ["(",")", ";", ":", ",", ".", "?", "!"];
+
+    
+    /* 
+    let english = ["hers","yes","can","can not", "to do", "at", "with"];
+    let vietnamese = ["của chị ấy","vâng","có thể","không thể","làm","ở","với"];
+    */
+    
+    if english.len() != vietnamese.len() {
+        panic!()
+    }
     let customstates: [&str; 4] = ["submit","space","delete","next"];
     let customfunctions: [&str; 4] = ["sumbitfn()", "pushfn(\" \")",  "popfn()", "nextfn()"];
     let mut custombuttons = Vec::new();
@@ -55,7 +82,7 @@ fn main() {
         file.write_all(format!("    {}_state: button::State,\n",i).as_bytes()).expect("write failed");
     }
 
-    for i in 0..charlist.len()+charlist2.len() {
+    for i in 0..latinletters.len()+vietnamesletters.len() {
         file.write_all(format!("    button_state{}: button::State,\n", i).as_bytes()).expect("write failed");
     }
     file.write_all(format!("}}\n").as_bytes()).expect("write failed");
@@ -67,7 +94,7 @@ fn main() {
     for i in &custombuttons {
         file.write_all(format!("    {}Button,\n",i).as_bytes()).expect("write failed");
     }
-    for i in 0..charlist.len()+charlist2.len() {
+    for i in 0..latinletters.len()+vietnamesletters.len() {
         file.write_all(format!("    ButtonPressed{},\n", i).as_bytes()).expect("write failed");
     }
     file.write_all("}\n".as_bytes()).expect("write failed");
@@ -101,7 +128,7 @@ fn main() {
     }
     */
     file.write_all("fn sumbitfn() {\n".as_bytes()).expect("write failed");
-    file.write_all("    let vietnamese = [\"của chị ấy\",\"vâng\",\"có thể\",\"không thể\",\"làm\",\"ở\",\"với\"];\n".as_bytes()).expect("write failed");
+    file.write_all(format!("    let vietnamese = {:?};\n", vietnamese).as_bytes()).expect("write failed");
     file.write_all("    for i in vietnamese {\n".as_bytes()).expect("write failed");
     file.write_all("        VIETNAMESE.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
     file.write_all("    }\n".as_bytes()).expect("write failed");
@@ -140,7 +167,7 @@ fn main() {
     }
     */
     file.write_all("fn nextfn() {\n".as_bytes()).expect("write failed");
-    file.write_all("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..7);\n".as_bytes()).expect("write failed");
+    file.write_all(format!("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..{});\n", vietnamese.len()).as_bytes()).expect("write failed");
     file.write_all("LETTERS.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
     file.write_all("COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
@@ -160,11 +187,11 @@ fn main() {
         file.write_all(format!("      Message::{}Button => {},\n", custombuttons[i], customfunctions[i]).as_bytes()).expect("write failed");
     }
 
-    for i in 0..charlist.len()+charlist2.len() {
-        if i < charlist.len(){
-            file.write_all(format!("        Message::ButtonPressed{} => pushfn(\"{}\"),\n", i, charlist[i]).as_bytes()).expect("write failed");
-        } else if i >= charlist.len() {
-            file.write_all(format!("        Message::ButtonPressed{} => pushfn(\"{}\"),\n", i, charlist2[i-charlist.len()]).as_bytes()).expect("write failed");
+    for i in 0..latinletters.len()+vietnamesletters.len() {
+        if i < latinletters.len(){
+            file.write_all(format!("        Message::ButtonPressed{} => pushfn(\"{}\"),\n", i, latinletters[i]).as_bytes()).expect("write failed");
+        } else if i >= latinletters.len() {
+            file.write_all(format!("        Message::ButtonPressed{} => pushfn(\"{}\"),\n", i, vietnamesletters[i-latinletters.len()]).as_bytes()).expect("write failed");
         }
         
     }
@@ -178,7 +205,7 @@ fn main() {
     file.write_all("\n          return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
     file.write_all("\n      }\n".as_bytes()).expect("write failed");
     
-    file.write_all("        let english = [\"hers\",\"yes\",\"can\",\"can not\", \"to do\", \"at\", \"with\"];\n".as_bytes()).expect("write failed");
+    file.write_all(format!("        let english = {:?};\n", english).as_bytes()).expect("write failed");
     file.write_all("        for i in english {\n".as_bytes()).expect("write failed");
     file.write_all("           ENGLISH.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
     file.write_all("        }\n".as_bytes()).expect("write failed");
@@ -192,15 +219,15 @@ fn main() {
 
     // button1
     file.write_all("    let buttons1 = [\n".as_bytes()).expect("write failed");
-    for i in 0..charlist.len() {
-        file.write_all(format!("        add_button(&mut self.button_state{}, \"{}\", Message::ButtonPressed{}),\n",i,charlist[i], i).as_bytes()).expect("write failed");
+    for i in 0..latinletters.len() {
+        file.write_all(format!("        add_button(&mut self.button_state{}, \"{}\", Message::ButtonPressed{}),\n",i,latinletters[i], i).as_bytes()).expect("write failed");
     }
     file.write_all("    ];\n".as_bytes()).expect("write failed");
 
     // button2
     file.write_all("    let buttons2 = [\n".as_bytes()).expect("write failed");
-    for i in 0..charlist2.len() {
-        file.write_all(format!("        add_button(&mut self.button_state{}, \"{}\", Message::ButtonPressed{}),\n",i+charlist.len(),charlist2[i], i+charlist.len()).as_bytes()).expect("write failed");
+    for i in 0..vietnamesletters.len() {
+        file.write_all(format!("        add_button(&mut self.button_state{}, \"{}\", Message::ButtonPressed{}),\n",i+latinletters.len(),vietnamesletters[i], i+latinletters.len()).as_bytes()).expect("write failed");
     }
     file.write_all("    ];\n".as_bytes()).expect("write failed");
 
@@ -238,7 +265,7 @@ fn main() {
 
     file.write_all("fn main() -> iced::Result {\n".as_bytes()).expect("write failed");
     file.write_all("    let rgba = vec![0, 0, 0, 255];\n".as_bytes()).expect("write failed");
-    file.write_all("    N.lock_mut().unwrap().push(thread_rng().gen_range(0..7));\n".as_bytes()).expect("write failed");
+    file.write_all(format!("    N.lock_mut().unwrap().push(thread_rng().gen_range(0..{}));\n", vietnamese.len()).as_bytes()).expect("write failed");
     file.write_all("    COLOUR.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
 
 

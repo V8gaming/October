@@ -139,7 +139,7 @@ fn pushfn(letter: &str) {
         COLOUR.lock_mut().unwrap()[0] = 0
 }
 fn sumbitfn() {
-    let vietnamese = ["của chị ấy","vâng","có thể","không thể","làm","ở","với"];
+    let vietnamese = ["của chị ấy", "vâng", "có thể", "không thể", "làm", "ở", "với", "rất", "về", "một", "làm ơn", "phải", "trái"];
     for i in vietnamese {
         VIETNAMESE.lock_mut().unwrap().push(i)
     }
@@ -159,7 +159,7 @@ fn popfn() {
     }
 }
 fn nextfn() {
-N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..7);
+N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..13);
 LETTERS.lock_mut().unwrap().clear();
 COLOUR.lock_mut().unwrap()[0] = 0
 }
@@ -241,7 +241,7 @@ impl Sandbox for MyButton {
           return Button::new(a, Text::new(format!("{}",b))).on_press(c);
 
       }
-        let english = ["hers","yes","can","can not", "to do", "at", "with"];
+        let english = ["hers", "yes", "can, to be able to", "can not, don't be able to", "to do", "at, in", "with", "very (general comment/opinion - placed before the adjective)", "about", "one, a, an", "please", "must, right, right side", "left (side)"];
         for i in english {
            ENGLISH.lock_mut().unwrap().push(i)
         }
@@ -336,7 +336,7 @@ impl Sandbox for MyButton {
 }
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
-    N.lock_mut().unwrap().push(thread_rng().gen_range(0..7));
+    N.lock_mut().unwrap().push(thread_rng().gen_range(0..13));
     COLOUR.lock_mut().unwrap().push(0);
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
