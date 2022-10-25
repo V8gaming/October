@@ -1,13 +1,19 @@
-use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window};
+use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window, keyboard, Color};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
+use winit::event::{Event, VirtualKeyCode};
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit_input_helper::WinitInputHelper;
+use iced_native::Shell;
+
 
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<&str>> = Global::new();
 static VIETNAMESE: Global<Vec<&str>> = Global::new();
 static N: Global<Vec<usize>> = Global::new();
+static COLOUR: Global<Vec<usize>> = Global::new();
 
 #[derive(Default, Clone, Debug)]
 struct MyButton {
@@ -33,10 +39,10 @@ enum Message {
     ButtonPressed3,
 }
 
-
 fn pushfn(letter: &str) {
     LETTERS.lock_mut().unwrap().push(letter.to_string());
     println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
+    COLOUR.lock_mut().unwrap()[0] = 0
 }
 
 fn sumbitfn() {
@@ -47,9 +53,11 @@ fn sumbitfn() {
     }
     
     if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
-        println!("true")
+        println!("true");
+        COLOUR.lock_mut().unwrap()[0] = 2
     } else {
-        println!("false")
+        println!("false");
+        COLOUR.lock_mut().unwrap()[0] = 1
     }
 }
 
@@ -57,6 +65,7 @@ fn popfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().pop();
         println!("{}",LETTERS.lock_mut().unwrap().concat());
+        COLOUR.lock_mut().unwrap()[0] = 0
     } 
     
 }
@@ -64,6 +73,7 @@ fn popfn() {
 fn nextfn() {
     N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
     LETTERS.lock_mut().unwrap().clear();
+    COLOUR.lock_mut().unwrap()[0] = 0
 }
 
 impl Sandbox for MyButton {
@@ -88,6 +98,7 @@ impl Sandbox for MyButton {
             Message::ButtonPressed1 => pushfn("b"),
             Message::ButtonPressed2 => pushfn("c"),
             Message::ButtonPressed3 => pushfn("d"),
+            
 
         };
 
@@ -98,7 +109,6 @@ impl Sandbox for MyButton {
         fn add_button<'a>(a: &'a mut button::State,b: &'a str,c: Message) -> Button<'a, Message> {
             return Button::new(a, Text::new(format!("{}",b))).on_press(c);
         }
-       
 
         let english = ["hers","yes","can","can not"];
         for i in english {
@@ -107,8 +117,8 @@ impl Sandbox for MyButton {
 
         let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150)).size(80);
 
-        let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80);
-
+        let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
+        let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80).color(colours[COLOUR.lock_mut().unwrap()[0]]);
         /* 
         let mut buttons: Vec<Button<Message>> = Vec::new();
         
@@ -162,6 +172,7 @@ impl Sandbox for MyButton {
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
     N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));
+    COLOUR.lock_mut().unwrap().push(0);
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
             size: (800, 600),
@@ -184,5 +195,6 @@ fn main() -> iced::Result {
         try_opengles_first: false,
     };
     MyButton::run(setting)
+
 }
 
