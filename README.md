@@ -10,3 +10,4 @@ cargo run --bin generator; cargo run --bin generated
 - [ ] Timer
 - [ ] Keypresses
 - [ ] Main page
+- [ ] Remake database as (table name = level. data = [english, vietnamese, type])
