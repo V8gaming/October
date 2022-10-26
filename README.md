@@ -11,3 +11,9 @@ cargo run --bin generator; cargo run --bin generated
 - [ ] Keypresses
 - [ ] Main page
 - [ ] Remake database as (table name = level. data = [english, vietnamese, type])
+- [ ] Language Page
+- [ ] Options Page
+
+## Future
+- [ ] No Vecs
+- [ ] Compile without generator
