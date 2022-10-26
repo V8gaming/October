@@ -1,8 +1,10 @@
-use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window, Color};
+#![windows_subsystem = "windows"]
+use iced::{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
+use iced_native::{Event, keyboard};
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<&str>> = Global::new();
 static VIETNAMESE: Global<Vec<&str>> = Global::new();
@@ -88,6 +90,7 @@ struct MyButton {
 }
 
 #[derive(Debug, Clone)]enum Message {
+    EventOccurred(iced_native::Event),
     ShiftButton,
     SubmitButton,
     SpaceButton,
@@ -164,7 +167,7 @@ struct MyButton {
 }
 fn pushfn(letter:String) {
     LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
-    println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
+    //println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
 }
 fn shiftfn(letter: String) -> String {
@@ -188,23 +191,23 @@ fn sumbitfn() {
     }
     if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
         COLOUR.lock_mut().unwrap()[0] = 2;
-        println!("true")
+        //println!("true")
     } else {
         COLOUR.lock_mut().unwrap()[0] = 1;
-        println!("false")
+        //println!("false")
     }
 }
 fn popfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().pop();
-        println!("{}",LETTERS.lock_mut().unwrap().concat());
+        //println!("{}",LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
     }
 }
 fn clearfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().clear();
-        println!("{}",LETTERS.lock_mut().unwrap().concat());
+        //println!("{}",LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
     }
 }
@@ -213,15 +216,27 @@ N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..13);
 LETTERS.lock_mut().unwrap().clear();
 COLOUR.lock_mut().unwrap()[0] = 0
 }
-impl Sandbox for MyButton {
+impl Application for MyButton {
     type Message = Message;
-   fn new() -> Self {
-        Self::default()
-  }
+    type Executor = executor::Default;
+    type Flags = ();
+
+    fn subscription(&self) -> Subscription<Message> {
+
+        iced_native::subscription::events().map(Message::EventOccurred)
+
+    }
+
+    fn new(_flags: ()) -> (MyButton, Command<Message>) {
+
+        (MyButton::default(), Command::none())
+
+    }
+
   fn title(&self) -> String {
-        String::from("Button")
+        String::from("October")
    }
-  fn update(&mut self, message: Message) {
+  fn update(&mut self, message: Message) -> Command<Message> {
         match message {
       Message::ShiftButton => shiftvaluefn(),
       Message::SubmitButton => sumbitfn(),
@@ -296,7 +311,70 @@ impl Sandbox for MyButton {
         Message::ButtonPressed64 => pushfn(String::from(".")),
         Message::ButtonPressed65 => pushfn(String::from("?")),
         Message::ButtonPressed66 => pushfn(String::from("!")),
-      }
+      Message::EventOccurred(event) => {          if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
+              pushfn(String::from(" "))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {
+              shiftvaluefn()
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _ }) = event {
+              nextfn()
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {
+              sumbitfn()
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Backspace, modifiers: _ }) = event {
+              popfn()
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::A, modifiers: _ }) = event {
+              pushfn(String::from("a"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::B, modifiers: _ }) = event {
+              pushfn(String::from("b"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::C, modifiers: _ }) = event {
+              pushfn(String::from("c"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::D, modifiers: _ }) = event {
+              pushfn(String::from("d"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::E, modifiers: _ }) = event {
+              pushfn(String::from("e"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::F, modifiers: _ }) = event {
+              pushfn(String::from("f"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::G, modifiers: _ }) = event {
+              pushfn(String::from("g"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::H, modifiers: _ }) = event {
+              pushfn(String::from("h"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::I, modifiers: _ }) = event {
+              pushfn(String::from("i"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::J, modifiers: _ }) = event {
+              pushfn(String::from("j"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::K, modifiers: _ }) = event {
+              pushfn(String::from("k"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::L, modifiers: _ }) = event {
+              pushfn(String::from("l"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::M, modifiers: _ }) = event {
+              pushfn(String::from("m"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::N, modifiers: _ }) = event {
+              pushfn(String::from("n"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::O, modifiers: _ }) = event {
+              pushfn(String::from("o"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::P, modifiers: _ }) = event {
+              pushfn(String::from("p"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Q, modifiers: _ }) = event {
+              pushfn(String::from("q"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::R, modifiers: _ }) = event {
+              pushfn(String::from("r"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::S, modifiers: _ }) = event {
+              pushfn(String::from("s"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::T, modifiers: _ }) = event {
+              pushfn(String::from("t"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::U, modifiers: _ }) = event {
+              pushfn(String::from("u"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::V, modifiers: _ }) = event {
+              pushfn(String::from("v"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::W, modifiers: _ }) = event {
+              pushfn(String::from("w"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::X, modifiers: _ }) = event {
+              pushfn(String::from("x"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Y, modifiers: _ }) = event {
+              pushfn(String::from("y"))
+          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Z, modifiers: _ }) = event {
+              pushfn(String::from("z"))
+          }      }      }
+      Command::none()
     }
 
   fn view(&mut self) -> Element<Message> {
