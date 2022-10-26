@@ -36,13 +36,13 @@ fn main() {
     }
 
     let latinletters: [&str; 26] = ["a","b","c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-    let vietnameseletters: [&str; 29] = [
+    let vietnameseletters: [&str; 33] = [
     "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
     "đ",
-    "ỏ","ơ","ờ","ồ","ó","ô","ọ",
+    "ỏ","ơ","ờ","ồ","ó","ô","ọ","ộ","ớ","ở",
     "ư","ụ","ữ","ú", "ủ",
     "í","ì","ị",
-    "ế","ẹ", "ể"
+    "ế","ẹ", "ể", "ề"
     ];
     let punctuation: [&str; 8] = ["(",")", ";", ":", ",", ".", "?", "!"];
 
@@ -354,7 +354,7 @@ fn main() {
     file.write_all("    let setting: iced::Settings<()> = Settings {\n".as_bytes()).expect("write failed");
     file.write_all("        window: window::Settings {\n".as_bytes()).expect("write failed");
 
-    file.write_all("            size: (800, 600),resizable: true,decorations: true,min_size: Some((100 as u32,100 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),".as_bytes()).expect("write failed");
+    file.write_all("            size: (900, 600),resizable: true,decorations: true,min_size: Some((900 as u32,600 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),".as_bytes()).expect("write failed");
     file.write_all("        },default_font: Some(include_bytes!(\"../../resources/Arial Unicode MS Font.ttf\")),antialiasing: true,id: Some(\"October\".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,\n".as_bytes()).expect("write failed");
 
     file.write_all("    };\n".as_bytes()).expect("write failed");

@@ -7,8 +7,9 @@ cargo run --bin generator; cargo run --bin generated
 ```
 
 ## Todo
-- [ ] Timer
+- [ ] Convert Sandbox to Application
 - [ ] Keypresses
+- [ ] Timer
 - [ ] Main page
 - [ ] Remake database as (table name = level. data = [english, vietnamese, type])
 - [ ] Language Page

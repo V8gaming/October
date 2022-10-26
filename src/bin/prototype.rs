@@ -1,8 +1,9 @@
-use iced::{button, Button, Element, Sandbox, Settings, Text, Container, Length, Column, Row, window, Color};
+use iced::{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
+use iced_native::{Event, keyboard};
 
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<&str>> = Global::new();
@@ -27,6 +28,7 @@ struct MyButton {
 
 #[derive(Debug, Clone)]
 enum Message {
+    EventOccurred(iced_native::Event),
     ShiftButton,
     NextButton,
     SubmitButton,
@@ -85,25 +87,31 @@ fn popfn() {
     
 }
 
+
 fn nextfn() {
     N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
     LETTERS.lock_mut().unwrap().clear();
     COLOUR.lock_mut().unwrap()[0] = 0
 }
 
-impl Sandbox for MyButton {
+impl Application for MyButton {
     type Message = Message;
+    type Executor = executor::Default;
+    type Flags = ();
+    
+    fn subscription(&self) -> Subscription<Message> {
+        iced_native::subscription::events().map(Message::EventOccurred)
+    }
 
-
-    fn new() -> Self {
-        Self::default()
+    fn new(_flags: ()) -> (MyButton, Command<Message>) {
+        (MyButton::default(), Command::none())
     }
 
     fn title(&self) -> String {
         String::from("Button")
     }
     
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::SubmitButton => sumbitfn(),
             Message::SpaceButton => pushfn(String::from(" ")),
@@ -114,8 +122,20 @@ impl Sandbox for MyButton {
             Message::ButtonPressed1 => pushfn(String::from("b")),
             Message::ButtonPressed2 => pushfn(String::from("c")),
             Message::ButtonPressed3 => pushfn(String::from("d")),
-
+            Message::EventOccurred(event) => {
+                if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
+                    pushfn(String::from(" "))
+                } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {
+                    shiftvaluefn()
+                } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _}) = event {
+                    nextfn()
+                } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {
+                    sumbitfn()
+                } 
+            },
         };
+
+        Command::none()
 
     }
 
@@ -182,6 +202,7 @@ impl Sandbox for MyButton {
             .into()
         
     }
+    
 }
 
 
