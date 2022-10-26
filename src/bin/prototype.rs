@@ -9,9 +9,12 @@ static ENGLISH: Global<Vec<&str>> = Global::new();
 static VIETNAMESE: Global<Vec<&str>> = Global::new();
 static N: Global<Vec<usize>> = Global::new();
 static COLOUR: Global<Vec<usize>> = Global::new();
+static X: Global<Vec<usize>> = Global::new();
+
 
 #[derive(Default, Clone, Debug)]
 struct MyButton {
+    shift_state: button::State,
     next_state: button::State,
     submit_state: button::State,
     space_state: button::State,
@@ -24,6 +27,7 @@ struct MyButton {
 
 #[derive(Debug, Clone)]
 enum Message {
+    ShiftButton,
     NextButton,
     SubmitButton,
     SpaceButton,
@@ -34,10 +38,26 @@ enum Message {
     ButtonPressed3,
 }
 
-fn pushfn(letter: &str) {
-    LETTERS.lock_mut().unwrap().push(letter.to_string());
+fn pushfn(letter: String) {
+    LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
     println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
     COLOUR.lock_mut().unwrap()[0] = 0
+}
+
+fn shiftfn(letter: String) -> String {
+    if X.lock_mut().unwrap()[0] == 1 {
+        return letter.to_uppercase();
+    } else {
+        return letter.to_lowercase();
+    }
+}
+
+fn shiftvaluefn() {
+    if X.lock_mut().unwrap()[0] == 1 {
+        X.lock_mut().unwrap()[0] = 0;
+    } else {
+        X.lock_mut().unwrap()[0] = 1;
+    }
 }
 
 fn sumbitfn() {
@@ -86,14 +106,14 @@ impl Sandbox for MyButton {
     fn update(&mut self, message: Message) {
         match message {
             Message::SubmitButton => sumbitfn(),
-            Message::SpaceButton => pushfn(" "),
+            Message::SpaceButton => pushfn(String::from(" ")),
             Message::DeleteButton => popfn(),
             Message::NextButton => nextfn(),
-            Message::ButtonPressed0 => pushfn("a"),
-            Message::ButtonPressed1 => pushfn("b"),
-            Message::ButtonPressed2 => pushfn("c"),
-            Message::ButtonPressed3 => pushfn("d"),
-            
+            Message::ShiftButton => shiftvaluefn(),
+            Message::ButtonPressed0 => pushfn(String::from("a")),
+            Message::ButtonPressed1 => pushfn(String::from("b")),
+            Message::ButtonPressed2 => pushfn(String::from("c")),
+            Message::ButtonPressed3 => pushfn(String::from("d")),
 
         };
 
@@ -101,7 +121,7 @@ impl Sandbox for MyButton {
 
     fn view(&mut self) -> Element<Message> {
 
-        fn add_button<'a>(a: &'a mut button::State,b: &'a str,c: Message) -> Button<'a, Message> {
+        fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
             return Button::new(a, Text::new(format!("{}",b))).on_press(c);
         }
 
@@ -121,10 +141,10 @@ impl Sandbox for MyButton {
         buttons.push(button)
         */
         let buttons = [
-            add_button(&mut self.button_state0, "a", Message::ButtonPressed0),
-            add_button(&mut self.button_state1, "b", Message::ButtonPressed1),
-            add_button(&mut self.button_state2, "c", Message::ButtonPressed2),
-            add_button(&mut self.button_state3, "d", Message::ButtonPressed3),
+            add_button(&mut self.button_state0, shiftfn(String::from("a")), Message::ButtonPressed0),
+            add_button(&mut self.button_state1, shiftfn(String::from("b")), Message::ButtonPressed1),
+            add_button(&mut self.button_state2, shiftfn(String::from("c")), Message::ButtonPressed2),
+            add_button(&mut self.button_state3, shiftfn(String::from("d")), Message::ButtonPressed3),
         ];
 
          /* 
@@ -137,13 +157,14 @@ impl Sandbox for MyButton {
         let button3 = Button::new(&mut self.button_state3, Text::new("C"))
             .on_press(Message::ButtonPressed3);
         */
-        let submit = add_button(&mut self.submit_state, "submit", Message::SubmitButton);
-        let space = add_button(&mut self.space_state, "space", Message::SpaceButton);
-        let delete = add_button(&mut self.delete_state, "delete", Message::DeleteButton);
-        let next = add_button(&mut self.next_state, "next", Message::NextButton);
+        let shift = add_button(&mut self.shift_state, String::from("Shift"), Message::ShiftButton);
+        let submit = add_button(&mut self.submit_state, String::from("submit"), Message::SubmitButton);
+        let space = add_button(&mut self.space_state, String::from("space"), Message::SpaceButton);
+        let delete = add_button(&mut self.delete_state, String::from("delete"), Message::DeleteButton);
+        let next = add_button(&mut self.next_state, String::from("next"), Message::NextButton);
 
         let mut userrow = Row::new();
-        userrow = userrow.push(submit).push(space).push(delete).push(next);
+        userrow = userrow.push(submit).push(space).push(delete).push(next).push(shift);
 
 
         let mut row1 = Row::new();
@@ -168,6 +189,7 @@ fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
     N.lock_mut().unwrap().push(thread_rng().gen_range(0..4));
     COLOUR.lock_mut().unwrap().push(0);
+    X.lock_mut().unwrap().push(0);
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
             size: (800, 600),
@@ -182,7 +204,7 @@ fn main() -> iced::Result {
         },
         default_font: Some(include_bytes!("../../resources/Arial Unicode MS Font.ttf")),
         antialiasing: true,
-        id: Some("buttons".to_string()),
+        id: Some("October".to_string()),
         flags: (),
         default_text_size: 20,
         text_multithreading: true,
