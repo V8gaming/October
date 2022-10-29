@@ -17,7 +17,7 @@ fn main() {
     let mut tables: Vec<String> = Vec::new();
 
     let mut statement = connection
-        .prepare("SELECT * FROM Prepositions")
+        .prepare("SELECT * FROM Basic")
         .unwrap();
 
     while let Ok(State::Row) = statement.next() {
@@ -31,7 +31,7 @@ fn main() {
         .unwrap();
 
     while let Ok(State::Row) = statement2.next() {
-        //println!("{}", statement2.read::<String>(0).unwrap());
+        println!("{}", statement2.read::<String>(0).unwrap());
         tables.push(statement2.read::<String>(0).unwrap())
     }
 
@@ -70,15 +70,18 @@ fn main() {
     }
     
     let mut file = std::fs::File::create("./src/bin/main.rs").expect("create failed");
+    
     file.write_all(format!("#![windows_subsystem = \"windows\"]\n").as_bytes()).expect("write failed");
 
-    file.write_all(format!("use iced::{{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor}};\n").as_bytes()).expect("write failed");
+    file.write_all(format!("use iced::{{Application,Command, Subscription, executor, button, Button, Element, Settings, Text, Container, Length, Column, Row, window, Color}};\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced::window::Position::Specific;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced::window::Icon;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use global::Global;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use rand::{{thread_rng, Rng}};\n").as_bytes()).expect("write failed");
+    file.write_all(format!("use sqlite::State;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced_native::{{Event, keyboard}};\n").as_bytes()).expect("write failed");
 
+    
 
     // static LETTERS: Global<Vec<String>> = Global::new();
     file.write_all(format!("static LETTERS: Global<Vec<String>> = Global::new();\n").as_bytes()).expect("write failed");
@@ -89,17 +92,24 @@ fn main() {
     static N: Global<Vec<usize>> = Global::new();
     */
 
-    file.write_all(format!("static ENGLISH: Global<Vec<&str>> = Global::new();\n").as_bytes()).expect("write failed");
-    file.write_all(format!("static VIETNAMESE: Global<Vec<&str>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static ENGLISH: Global<Vec<String>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static VIETNAMESE: Global<Vec<String>> = Global::new();\n").as_bytes()).expect("write failed");
     file.write_all(format!("static N: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
     file.write_all(format!("static COLOUR: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
     file.write_all(format!("static X: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static TABLE: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static TEXTTYPE: Global<Vec<String>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static SCREEN: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
 
 
     file.write_all("\n".as_bytes()).expect("write failed");
     file.write_all(format!("#[derive(Default, Clone)]\nstruct MyButton {{\n").as_bytes()).expect("write failed");
-
     
+    file.write_all(format!("    gotomain_state: button::State,\n").as_bytes()).expect("write failed");
+
+    for i in &tables {
+        file.write_all(format!("    {}_state: button::State,\n",i).as_bytes()).expect("write failed");
+    }
     for i in customstates {
         file.write_all(format!("    {}_state: button::State,\n",i).as_bytes()).expect("write failed");
     }
@@ -113,7 +123,13 @@ fn main() {
 
     // emum Message
     file.write_all("enum Message {\n".as_bytes()).expect("write failed");
-    file.write_all(format!("    EventOccurred(iced_native::Event),\n").as_bytes()).expect("write failed");
+    file.write_all("    EventOccurred(iced_native::Event),\n".as_bytes()).expect("write failed");
+
+    file.write_all("    GotoMainButton,\n".as_bytes()).expect("write failed");
+
+    for i in 0..tables.len() {
+        file.write_all(format!("    {}Button,\n",some_kind_of_uppercase_first_letter(&tables[i])).as_bytes()).expect("write failed");
+    }
     for i in &custombuttons {
         file.write_all(format!("    {}Button,\n",i).as_bytes()).expect("write failed");
     }
@@ -131,7 +147,7 @@ fn main() {
     */
     file.write_all("fn pushfn(letter:String) {\n".as_bytes()).expect("write failed");
     file.write_all("    LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));\n".as_bytes()).expect("write failed");
-    file.write_all("    //println!(\"ADDED {} TO {}\", letter,LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
+    file.write_all("    println!(\"ADDED {} TO {}\", letter,LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
     file.write_all("        COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
     /*
@@ -187,17 +203,12 @@ fn main() {
     }
     */
     file.write_all("fn sumbitfn() {\n".as_bytes()).expect("write failed");
-    file.write_all(format!("    let vietnamese = {:?};\n", vietnamese).as_bytes()).expect("write failed");
-    file.write_all("    for i in vietnamese {\n".as_bytes()).expect("write failed");
-    file.write_all("        VIETNAMESE.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
-    file.write_all("    }\n".as_bytes()).expect("write failed");
-
     file.write_all("    if format!(\"{}\", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{\n".as_bytes()).expect("write failed");
     file.write_all("        COLOUR.lock_mut().unwrap()[0] = 2;\n".as_bytes()).expect("write failed");
-    file.write_all("        //println!(\"true\")\n".as_bytes()).expect("write failed");
+    file.write_all("        println!(\"true\")\n".as_bytes()).expect("write failed");
     file.write_all("    } else {\n".as_bytes()).expect("write failed");
     file.write_all("        COLOUR.lock_mut().unwrap()[0] = 1;\n".as_bytes()).expect("write failed");
-    file.write_all("        //println!(\"false\")\n".as_bytes()).expect("write failed");
+    file.write_all("        println!(\"false\")\n".as_bytes()).expect("write failed");
     file.write_all("    }\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
@@ -213,7 +224,7 @@ fn main() {
     file.write_all("fn popfn() {\n".as_bytes()).expect("write failed");
     file.write_all("    if LETTERS.lock_mut().unwrap().len() != 0 {\n".as_bytes()).expect("write failed");
     file.write_all("        LETTERS.lock_mut().unwrap().pop();\n".as_bytes()).expect("write failed");
-    file.write_all("        //println!(\"{}\",LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
+    file.write_all("        println!(\"{}\",LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
     file.write_all("        COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
     file.write_all("    }\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
@@ -222,150 +233,82 @@ fn main() {
     file.write_all("fn clearfn() {\n".as_bytes()).expect("write failed");
     file.write_all("    if LETTERS.lock_mut().unwrap().len() != 0 {\n".as_bytes()).expect("write failed");
     file.write_all("        LETTERS.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
-    file.write_all("        //println!(\"{}\",LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
+    file.write_all("        println!(\"{}\",LETTERS.lock_mut().unwrap().concat());\n".as_bytes()).expect("write failed");
     file.write_all("        COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
     file.write_all("    }\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
     /*
-    fn nextfn() {
-        N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
-        LETTERS.lock_mut().unwrap().clear();
-        COLOUR.lock_mut().unwrap()[0] = 0
+    fn index() {
+        if TABLE.lock_mut().unwrap()[0] == 1{
+            TABLE.lock_mut().unwrap()[0] = 0
+        } else if TABLE.lock_mut().unwrap()[0] == 0 {
+            TABLE.lock_mut().unwrap()[0] = 1
+        } else {
+            TABLE.lock_mut().unwrap()[0] = 0
+        }
+        loaddata();
+        nextfn();
     }
     */
-    file.write_all("fn nextfn() {\n".as_bytes()).expect("write failed");
-    file.write_all(format!("N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..{});\n", vietnamese.len()).as_bytes()).expect("write failed");
-    file.write_all("LETTERS.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
-    file.write_all("COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
+    file.write_all("fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {\n".as_bytes()).expect("write failed");
+    file.write_all("    return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
-    // impl Application for MyButton
-    file.write_all("impl Application for MyButton {\n".as_bytes()).expect("write failed");
-    file.write_all("    type Message = Message;\n".as_bytes()).expect("write failed");
-    file.write_all("    type Executor = executor::Default;\n".as_bytes()).expect("write failed");
-    file.write_all("    type Flags = ();\n".as_bytes()).expect("write failed");
 
-    /*
-    fn subscription(&self) -> Subscription<Message> {
-        iced_native::subscription::events().map(Message::EventOccurred)
-    }
-    */
-    file.write_all("\n    fn subscription(&self) -> Subscription<Message> {\n".as_bytes()).expect("write failed");
-    file.write_all("\n        iced_native::subscription::events().map(Message::EventOccurred)\n".as_bytes()).expect("write failed");
-    file.write_all("\n    }\n".as_bytes()).expect("write failed");
+    file.write_all("fn index(num: usize) {\n".as_bytes()).expect("write failed");
+    file.write_all("    SCREEN.lock_mut().unwrap()[0] = 1;\n".as_bytes()).expect("write failed");
 
-    /*
-    fn new(_flags: ()) -> (MyButton, Command<Message>) {
-        (MyButton::default(), Command::none())
-    }
+    file.write_all("    TABLE.lock_mut().unwrap()[0] = num;\n".as_bytes()).expect("write failed");
+    file.write_all("    loaddata();\n".as_bytes()).expect("write failed");
+    file.write_all("    nextfn();\n".as_bytes()).expect("write failed");
+
+    file.write_all("}\n".as_bytes()).expect("write failed");
     
-    */
-    file.write_all("\n    fn new(_flags: ()) -> (MyButton, Command<Message>) {\n".as_bytes()).expect("write failed");
-    file.write_all("\n        (MyButton::default(), Command::none())\n".as_bytes()).expect("write failed");
-    file.write_all("\n    }\n".as_bytes()).expect("write failed");
+    file.write_all("fn makemain(selfx: &mut MyButton) -> Element<Message>{\n".as_bytes()).expect("write failed");
+    file.write_all("    let maincolumn = Column::new()".as_bytes()).expect("write failed");
+    for i in 0..tables.len() {
+        file.write_all(format!(".push(add_button(&mut selfx.{}_state, String::from(\"Enter {}\"), Message::{}Button))", tables[i], tables[i], some_kind_of_uppercase_first_letter(&tables[i])).as_bytes()).expect("write failed");
+    }
+    file.write_all("    ;\n".as_bytes()).expect("write failed");
 
-    // fn title
-    file.write_all("\n  fn title(&self) -> String {\n        String::from(\"October\")\n   }".as_bytes()).expect("write failed");
-
-
-    // fn update
-    file.write_all("\n  fn update(&mut self, message: Message) -> Command<Message> {\n        match message {\n".as_bytes()).expect("write failed");
+    file.write_all("    let main: Element<Message> = Container::new(maincolumn)\n".as_bytes()).expect("write failed");
+    file.write_all("        .padding(100)\n".as_bytes()).expect("write failed");
+    file.write_all("        .width(Length::Fill)\n".as_bytes()).expect("write failed");
+    file.write_all("        .height(Length::Fill)\n".as_bytes()).expect("write failed");
+    file.write_all("        .center_x()\n".as_bytes()).expect("write failed");
+    file.write_all("        .center_y()\n".as_bytes()).expect("write failed");
+    file.write_all("        .into();\n".as_bytes()).expect("write failed");
+    file.write_all("    return main;\n".as_bytes()).expect("write failed");
+    file.write_all("}\n".as_bytes()).expect("write failed");
     
-    for i in 0..customstates.len() {
-        file.write_all(format!("      Message::{}Button => {},\n", custombuttons[i], customfunctions[i]).as_bytes()).expect("write failed");
-    }
-
-    for i in 0..listlengths {
-        if i < latinletters.len(){
-            file.write_all(format!("        Message::ButtonPressed{} => pushfn(String::from(\"{}\")),\n", i, latinletters[i]).as_bytes()).expect("write failed");
-        } else if i >= latinletters.len() && i < latinletters.len() + vietnameseletters.len() {
-            file.write_all(format!("        Message::ButtonPressed{} => pushfn(String::from(\"{}\")),\n", i, vietnameseletters[i-latinletters.len()]).as_bytes()).expect("write failed");
-        } else if i >= latinletters.len() + vietnameseletters.len() {
-            file.write_all(format!("        Message::ButtonPressed{} => pushfn(String::from(\"{}\")),\n", i, punctuation[i-(latinletters.len()+vietnameseletters.len())]).as_bytes()).expect("write failed");
-        }
-        
-    }
-    file.write_all(format!("      Message::EventOccurred(event) => {{").as_bytes()).expect("write failed");
-    /*
-    if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
-        pushfn(String::from(" "))
-    } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {
-        shiftvaluefn()
-    } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _}) = event {
-        nextfn()
-    } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {
-        sumbitfn()
-    } 
-    */
-    file.write_all(format!("          if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::Space, modifiers: _ }}) = event {{\n").as_bytes()).expect("write failed");
-    file.write_all(format!("              pushfn(String::from(\" \"))\n").as_bytes()).expect("write failed");
-    file.write_all(format!("          }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::LShift, modifiers: _ }}) = event {{\n").as_bytes()).expect("write failed");
-    file.write_all(format!("              shiftvaluefn()\n").as_bytes()).expect("write failed");
-    file.write_all(format!("          }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::Right, modifiers: _ }}) = event {{\n").as_bytes()).expect("write failed");
-    file.write_all(format!("              nextfn()\n").as_bytes()).expect("write failed");
-    file.write_all(format!("          }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::Enter, modifiers: _ }}) = event {{\n").as_bytes()).expect("write failed");
-    file.write_all(format!("              sumbitfn()\n").as_bytes()).expect("write failed");
-    file.write_all(format!("          }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::Backspace, modifiers: _ }}) = event {{\n").as_bytes()).expect("write failed");
-    file.write_all(format!("              popfn()\n").as_bytes()).expect("write failed");
-    for i in latinletters {
-        file.write_all(format!("          }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::{}, modifiers: _ }}) = event {{\n", i.to_uppercase()).as_bytes()).expect("write failed");
-        file.write_all(format!("              pushfn(String::from(\"{}\"))\n", i).as_bytes()).expect("write failed");
-    }
-    file.write_all(format!("          }}").as_bytes()).expect("write failed");
-
-    file.write_all(format!("      }}").as_bytes()).expect("write failed");
-
-    file.write_all("      }\n".as_bytes()).expect("write failed");
-    file.write_all("      Command::none()\n".as_bytes()).expect("write failed");
-
-    file.write_all("    }\n".as_bytes()).expect("write failed");
-
-    // fn view
-    file.write_all("\n  fn view(&mut self) -> Element<Message> {".as_bytes()).expect("write failed");
-    file.write_all("\n      fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {\n".as_bytes()).expect("write failed");
-    file.write_all("\n          return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
-    file.write_all("\n      }\n".as_bytes()).expect("write failed");
-    
-    file.write_all(format!("        let tables = {:?};\n", tables).as_bytes()).expect("write failed");
-
-    file.write_all(format!("        let english = {:?};\n", english).as_bytes()).expect("write failed");
-    file.write_all("        for i in english {\n".as_bytes()).expect("write failed");
-    file.write_all("           ENGLISH.lock_mut().unwrap().push(i)\n".as_bytes()).expect("write failed");
-    file.write_all("        }\n".as_bytes()).expect("write failed");
-   
-    file.write_all("        let texttype = Text::new(format!(\"{}\",tables[0] )).height(Length::Units(30)).size(20).color(Color::from_rgb(1.0,0.0,1.0));\n".as_bytes()).expect("write failed");
-    file.write_all("        let english = Text::new(format!(\"{}\",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(100)).size(80);\n".as_bytes()).expect("write failed");
-    // text1
-    // let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    // let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(250)).size(100);
-    file.write_all("        let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];\n".as_bytes()).expect("write failed");
-    file.write_all("        let text1 = Text::new(format!(\"{}\", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(100)).size(80).color(colours[COLOUR.lock_mut().unwrap()[0]]);\n".as_bytes()).expect("write failed");
+    file.write_all(" fn makelevel(selfx: &mut MyButton) -> Element<Message>{\n".as_bytes()).expect("write failed");
+    file.write_all("    let english = Text::new(format!(\"{}\",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(50);\n".as_bytes()).expect("write failed");
+    file.write_all("    let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];\n".as_bytes()).expect("write failed");
+    file.write_all("    let text1 = Text::new(format!(\"{}\", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(50).color(colours[COLOUR.lock_mut().unwrap()[0]]);\n".as_bytes()).expect("write failed");
+    file.write_all("    let texttype = Text::new(format!(\"{}\",TEXTTYPE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Fill).size(40);\n".as_bytes()).expect("write failed");
 
     // button1
     file.write_all("    let buttons1 = [\n".as_bytes()).expect("write failed");
     for i in 0..latinletters.len() {
-        file.write_all(format!("        add_button(&mut self.button_state{}, shiftfn(String::from(\"{}\")), Message::ButtonPressed{}),\n",i,latinletters[i], i).as_bytes()).expect("write failed");
+        file.write_all(format!("        add_button(&mut selfx.button_state{}, shiftfn(String::from(\"{}\")), Message::ButtonPressed{}),\n",i,latinletters[i], i).as_bytes()).expect("write failed");
     }
     file.write_all("    ];\n".as_bytes()).expect("write failed");
 
     // button2
     file.write_all("    let buttons2 = [\n".as_bytes()).expect("write failed");
     for i in 0..vietnameseletters.len() {
-        file.write_all(format!("        add_button(&mut self.button_state{}, shiftfn(String::from(\"{}\")), Message::ButtonPressed{}),\n",i+latinletters.len(),vietnameseletters[i], i+latinletters.len()).as_bytes()).expect("write failed");
+        file.write_all(format!("        add_button(&mut selfx.button_state{}, shiftfn(String::from(\"{}\")), Message::ButtonPressed{}),\n",i+latinletters.len(),vietnameseletters[i], i+latinletters.len()).as_bytes()).expect("write failed");
     }
     file.write_all("    ];\n".as_bytes()).expect("write failed");
 
     file.write_all("    let buttons3 = [\n".as_bytes()).expect("write failed");
     for i in 0..punctuation.len() {
-        file.write_all(format!("        add_button(&mut self.button_state{}, shiftfn(String::from(\"{}\")), Message::ButtonPressed{}),\n",i+latinletters.len()+vietnameseletters.len(),punctuation[i], i+latinletters.len()+vietnameseletters.len()).as_bytes()).expect("write failed");
+        file.write_all(format!("        add_button(&mut selfx.button_state{}, shiftfn(String::from(\"{}\")), Message::ButtonPressed{}),\n",i+latinletters.len()+vietnameseletters.len(),punctuation[i], i+latinletters.len()+vietnameseletters.len()).as_bytes()).expect("write failed");
     }
     file.write_all("    ];\n".as_bytes()).expect("write failed");
-
-    // submit
-    // let submit = add_button(&mut self.submit_state, "submit", Message::SubmitButton);
     for i in 0..customstates.len() {
-        file.write_all(format!("    let {} = add_button(&mut self.{}_state, String::from(\"{}\"), Message::{}Button);\n", customstates[i], customstates[i],customstates[i], custombuttons[i]).as_bytes()).expect("write failed");
+        file.write_all(format!("    let {} = add_button(&mut selfx.{}_state, String::from(\"{}\"), Message::{}Button);\n", customstates[i], customstates[i],customstates[i], custombuttons[i]).as_bytes()).expect("write failed");
     }
 
     // userrow
@@ -373,8 +316,6 @@ fn main() {
     for i in customstates {
         file.write_all(format!("    userrow = userrow.push({});\n", i).as_bytes()).expect("write failed");
     }
-   
-
     // row1
     file.write_all("    let mut row1 = Row::new();\n".as_bytes()).expect("write failed");
     file.write_all("    for button in buttons1 {\n".as_bytes()).expect("write failed");
@@ -392,18 +333,148 @@ fn main() {
     file.write_all("    for button in buttons3 {\n".as_bytes()).expect("write failed");
     file.write_all("        row3 = row3.push(button);\n".as_bytes()).expect("write failed");
     file.write_all("    };\n".as_bytes()).expect("write failed");
+    file.write_all("    let exit = add_button(&mut selfx.gotomain_state, String::from(\"Exit\"), Message::GotoMainButton);\n".as_bytes()).expect("write failed");
+
+    file.write_all("    let utilrow = Row::new().push(exit);\n".as_bytes()).expect("write failed");
+
     
-    file.write_all("    let column1 = Column::new().push(texttype).push(english).push(text1).push(userrow).push(row1).push(row2).push(row3).width(Length::Fill).align_items(iced::Alignment::Center);\n".as_bytes()).expect("write failed");
+    file.write_all("    let column1 = Column::new().push(utilrow.width(Length::Fill)).push(texttype).push(english).push(text1).push(userrow).push(row1).push(row2).push(row3).width(Length::Fill).align_items(iced::Alignment::Center);\n".as_bytes()).expect("write failed");
     file.write_all("    Container::new(column1)\n".as_bytes()).expect("write failed");
     file.write_all("    .padding(100)\n    .width(Length::Fill)\n    .height(Length::Fill)\n    .center_x()\n    .center_y()\n    .into()".as_bytes()).expect("write failed");
+    
 
+    file.write_all("}\n".as_bytes()).expect("write failed");
+    
+    /*
+    fn nextfn() {
+        N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..4);
+        LETTERS.lock_mut().unwrap().clear();
+        COLOUR.lock_mut().unwrap()[0] = 0
+    }
+    */
+    file.write_all("fn nextfn() {\n".as_bytes()).expect("write failed");
+    file.write_all("    N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());\n".as_bytes()).expect("write failed");
+    file.write_all("    LETTERS.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
+    file.write_all("    COLOUR.lock_mut().unwrap()[0] = 0\n".as_bytes()).expect("write failed");
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
+    file.write_all("fn loaddata() {\n".as_bytes()).expect("write failed");
+    file.write_all("    let connection = sqlite::open(\"./English-Vietnamese.sqlite3\").unwrap();\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut statement2 = connection\n".as_bytes()).expect("write failed");
+    file.write_all("    .prepare(\"SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'\" )\n    .unwrap();\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut tables: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    while let Ok(State::Row) = statement2.next() {\n".as_bytes()).expect("write failed");
+    file.write_all("        tables.push(statement2.read::<String>(0).unwrap())\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut statement = connection\n".as_bytes()).expect("write failed");
+    file.write_all("        .prepare(format!(\"SELECT * FROM {}\", tables[TABLE.lock_mut().unwrap()[0]]))\n".as_bytes()).expect("write failed");
+    file.write_all("        .unwrap();\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut vietnamese: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut english: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut typename: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    while let Ok(State::Row) = statement.next() {\n".as_bytes()).expect("write failed");
+    file.write_all("        english.push(statement.read::<String>(0).unwrap());\n".as_bytes()).expect("write failed");
+    file.write_all("        vietnamese.push(statement.read::<String>(1).unwrap());\n".as_bytes()).expect("write failed");
+    file.write_all("        typename.push(statement.read::<String>(2).unwrap());\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("    ENGLISH.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
+    file.write_all("    VIETNAMESE.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
+    file.write_all("    TEXTTYPE.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
+    file.write_all("    for i in english {\n".as_bytes()).expect("write failed");
+    file.write_all("        ENGLISH.lock_mut().unwrap().push(i);\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("    for i in vietnamese {\n".as_bytes()).expect("write failed");
+    file.write_all("        VIETNAMESE.lock_mut().unwrap().push(i);\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("    for i in typename {\n".as_bytes()).expect("write failed");
+    file.write_all("        TEXTTYPE.lock_mut().unwrap().push(i);\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("}\n".as_bytes()).expect("write failed");
+    // impl Sandbox for MyButton
+    file.write_all("impl Application for MyButton {\n".as_bytes()).expect("write failed");
+    file.write_all("    type Message = Message;\n".as_bytes()).expect("write failed");
+    file.write_all("    type Executor = executor::Default;\n".as_bytes()).expect("write failed");
+    file.write_all("    type Flags = ();\n".as_bytes()).expect("write failed");
+    
+    file.write_all("    fn subscription(&self) -> Subscription<Message> {\n".as_bytes()).expect("write failed");
+    file.write_all("        iced_native::subscription::events().map(Message::EventOccurred)\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
+    file.write_all("    fn new(_flags: ()) -> (MyButton, Command<Message>) {\n".as_bytes()).expect("write failed");
+    file.write_all("        (MyButton::default(), Command::none())\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    // fn title
+    file.write_all("\n  fn title(&self) -> String {\n        String::from(\"October\")\n   }".as_bytes()).expect("write failed");
+
+
+    // fn update
+    file.write_all("\n  fn update(&mut self, message: Message) -> Command<Message> {\n        match message {\n".as_bytes()).expect("write failed");
+    file.write_all(format!("      Message::GotoMainButton => SCREEN.lock_mut().unwrap()[0] = 0,\n").as_bytes()).expect("write failed");
+
+    for i in 0..tables.len() {
+        file.write_all(format!("      Message::{}Button => index({}),\n", some_kind_of_uppercase_first_letter(&tables[i]), i).as_bytes()).expect("write failed");
+    }
+    for i in 0..customstates.len() {
+        file.write_all(format!("      Message::{}Button => {},\n", custombuttons[i], customfunctions[i]).as_bytes()).expect("write failed");
+    }
+
+    for i in 0..listlengths {
+        if i < latinletters.len(){
+            file.write_all(format!("        Message::ButtonPressed{} => pushfn(String::from(\"{}\")),\n", i, latinletters[i]).as_bytes()).expect("write failed");
+        } else if i >= latinletters.len() && i < latinletters.len() + vietnameseletters.len() {
+            file.write_all(format!("        Message::ButtonPressed{} => pushfn(String::from(\"{}\")),\n", i, vietnameseletters[i-latinletters.len()]).as_bytes()).expect("write failed");
+        } else if i >= latinletters.len() + vietnameseletters.len() {
+            file.write_all(format!("        Message::ButtonPressed{} => pushfn(String::from(\"{}\")),\n", i, punctuation[i-(latinletters.len()+vietnameseletters.len())]).as_bytes()).expect("write failed");
+        } 
+    }
+    file.write_all(format!("        Message::EventOccurred(event) => {{\n").as_bytes()).expect("write failed");
+    file.write_all("        if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {\n".as_bytes()).expect("write failed");
+    file.write_all("            pushfn(String::from(\" \"))\n".as_bytes()).expect("write failed");
+    file.write_all("        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {\n".as_bytes()).expect("write failed");
+    file.write_all("            shiftvaluefn()\n".as_bytes()).expect("write failed");
+    file.write_all("        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _ }) = event {\n".as_bytes()).expect("write failed");
+    file.write_all("            nextfn()\n".as_bytes()).expect("write failed");
+    file.write_all("        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {\n".as_bytes()).expect("write failed");
+    file.write_all("            sumbitfn()\n".as_bytes()).expect("write failed");
+    file.write_all("        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Backspace, modifiers: _ }) = event {\n".as_bytes()).expect("write failed");
+    file.write_all("            popfn()\n".as_bytes()).expect("write failed");
+
+    for i in latinletters {
+        file.write_all(format!("        }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::{}, modifiers: _ }}) = event {{\n", i.to_uppercase()).as_bytes()).expect("write failed");
+        file.write_all(format!("                        pushfn(String::from(\"{}\"))\n", i).as_bytes()).expect("write failed");
+    }
+
+    file.write_all("      }\n".as_bytes()).expect("write failed");
+    
+
+
+    file.write_all("        },\n".as_bytes()).expect("write failed");
+    file.write_all("    };\n".as_bytes()).expect("write failed");
+    file.write_all("    Command::none()\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
+    // fn view
+    file.write_all("\n  fn view(&mut self) -> Element<Message> {".as_bytes()).expect("write failed");
+    file.write_all("\n      if SCREEN.lock_mut().unwrap()[0] == 0 {".as_bytes()).expect("write failed");
+    file.write_all("\n          return makemain(self);".as_bytes()).expect("write failed");
+    file.write_all("\n      } else if SCREEN.lock_mut().unwrap()[0] == 1 {".as_bytes()).expect("write failed");
+    file.write_all("\n          return makelevel(self);".as_bytes()).expect("write failed");
+    file.write_all("\n      } else {".as_bytes()).expect("write failed");
+    file.write_all("\n          return makemain(self); ".as_bytes()).expect("write failed");
+
+    file.write_all("\n      } ".as_bytes()).expect("write failed");
     file.write_all("\n    }\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
     file.write_all("fn main() -> iced::Result {\n".as_bytes()).expect("write failed");
     file.write_all("    let rgba = vec![0, 0, 0, 255];\n".as_bytes()).expect("write failed");
-    file.write_all(format!("    N.lock_mut().unwrap().push(thread_rng().gen_range(0..{}));\n", vietnamese.len()).as_bytes()).expect("write failed");
+    file.write_all("    TABLE.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
+    file.write_all("    loaddata();\n".as_bytes()).expect("write failed");
+
+    file.write_all("    N.lock_mut().unwrap().push(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()));\n".as_bytes()).expect("write failed");
     file.write_all("    COLOUR.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
+    file.write_all("    SCREEN.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
+
     file.write_all("    X.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
 
 

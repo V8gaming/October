@@ -1,19 +1,26 @@
 #![windows_subsystem = "windows"]
-use iced::{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor};
+use iced::{Application,Command, Subscription, executor, button, Button, Element, Settings, Text, Container, Length, Column, Row, window, Color};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
+use sqlite::State;
 use iced_native::{Event, keyboard};
 static LETTERS: Global<Vec<String>> = Global::new();
-static ENGLISH: Global<Vec<&str>> = Global::new();
-static VIETNAMESE: Global<Vec<&str>> = Global::new();
+static ENGLISH: Global<Vec<String>> = Global::new();
+static VIETNAMESE: Global<Vec<String>> = Global::new();
 static N: Global<Vec<usize>> = Global::new();
 static COLOUR: Global<Vec<usize>> = Global::new();
 static X: Global<Vec<usize>> = Global::new();
+static TABLE: Global<Vec<usize>> = Global::new();
+static TEXTTYPE: Global<Vec<String>> = Global::new();
+static SCREEN: Global<Vec<usize>> = Global::new();
 
 #[derive(Default, Clone)]
 struct MyButton {
+    gotomain_state: button::State,
+    basic_state: button::State,
+    intermediate_state: button::State,
     shift_state: button::State,
     submit_state: button::State,
     space_state: button::State,
@@ -91,6 +98,9 @@ struct MyButton {
 
 #[derive(Debug, Clone)]enum Message {
     EventOccurred(iced_native::Event),
+    GotoMainButton,
+    BasicButton,
+    IntermediateButton,
     ShiftButton,
     SubmitButton,
     SpaceButton,
@@ -167,7 +177,7 @@ struct MyButton {
 }
 fn pushfn(letter:String) {
     LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
-    //println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
+    println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
 }
 fn shiftfn(letter: String) -> String {
@@ -185,52 +195,208 @@ fn shiftvaluefn() {
     }
 }
 fn sumbitfn() {
-    let vietnamese = ["của chị ấy", "vâng", "có thể", "không thể", "làm", "ở", "với", "rất", "về", "một", "làm ơn", "phải", "trái"];
-    for i in vietnamese {
-        VIETNAMESE.lock_mut().unwrap().push(i)
-    }
     if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
         COLOUR.lock_mut().unwrap()[0] = 2;
-        //println!("true")
+        println!("true")
     } else {
         COLOUR.lock_mut().unwrap()[0] = 1;
-        //println!("false")
+        println!("false")
     }
 }
 fn popfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().pop();
-        //println!("{}",LETTERS.lock_mut().unwrap().concat());
+        println!("{}",LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
     }
 }
 fn clearfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().clear();
-        //println!("{}",LETTERS.lock_mut().unwrap().concat());
+        println!("{}",LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
     }
 }
+fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
+    return Button::new(a, Text::new(format!("{}",b))).on_press(c);
+}
+fn index(num: usize) {
+    SCREEN.lock_mut().unwrap()[0] = 1;
+    TABLE.lock_mut().unwrap()[0] = num;
+    loaddata();
+    nextfn();
+}
+fn makemain(selfx: &mut MyButton) -> Element<Message>{
+    let maincolumn = Column::new().push(add_button(&mut selfx.basic_state, String::from("Enter basic"), Message::BasicButton)).push(add_button(&mut selfx.intermediate_state, String::from("Enter intermediate"), Message::IntermediateButton))    ;
+    let main: Element<Message> = Container::new(maincolumn)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
+        .center_y()
+        .into();
+    return main;
+}
+ fn makelevel(selfx: &mut MyButton) -> Element<Message>{
+    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(50);
+    let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
+    let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(50).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let texttype = Text::new(format!("{}",TEXTTYPE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Fill).size(40);
+    let buttons1 = [
+        add_button(&mut selfx.button_state0, shiftfn(String::from("a")), Message::ButtonPressed0),
+        add_button(&mut selfx.button_state1, shiftfn(String::from("b")), Message::ButtonPressed1),
+        add_button(&mut selfx.button_state2, shiftfn(String::from("c")), Message::ButtonPressed2),
+        add_button(&mut selfx.button_state3, shiftfn(String::from("d")), Message::ButtonPressed3),
+        add_button(&mut selfx.button_state4, shiftfn(String::from("e")), Message::ButtonPressed4),
+        add_button(&mut selfx.button_state5, shiftfn(String::from("f")), Message::ButtonPressed5),
+        add_button(&mut selfx.button_state6, shiftfn(String::from("g")), Message::ButtonPressed6),
+        add_button(&mut selfx.button_state7, shiftfn(String::from("h")), Message::ButtonPressed7),
+        add_button(&mut selfx.button_state8, shiftfn(String::from("i")), Message::ButtonPressed8),
+        add_button(&mut selfx.button_state9, shiftfn(String::from("j")), Message::ButtonPressed9),
+        add_button(&mut selfx.button_state10, shiftfn(String::from("k")), Message::ButtonPressed10),
+        add_button(&mut selfx.button_state11, shiftfn(String::from("l")), Message::ButtonPressed11),
+        add_button(&mut selfx.button_state12, shiftfn(String::from("m")), Message::ButtonPressed12),
+        add_button(&mut selfx.button_state13, shiftfn(String::from("n")), Message::ButtonPressed13),
+        add_button(&mut selfx.button_state14, shiftfn(String::from("o")), Message::ButtonPressed14),
+        add_button(&mut selfx.button_state15, shiftfn(String::from("p")), Message::ButtonPressed15),
+        add_button(&mut selfx.button_state16, shiftfn(String::from("q")), Message::ButtonPressed16),
+        add_button(&mut selfx.button_state17, shiftfn(String::from("r")), Message::ButtonPressed17),
+        add_button(&mut selfx.button_state18, shiftfn(String::from("s")), Message::ButtonPressed18),
+        add_button(&mut selfx.button_state19, shiftfn(String::from("t")), Message::ButtonPressed19),
+        add_button(&mut selfx.button_state20, shiftfn(String::from("u")), Message::ButtonPressed20),
+        add_button(&mut selfx.button_state21, shiftfn(String::from("v")), Message::ButtonPressed21),
+        add_button(&mut selfx.button_state22, shiftfn(String::from("w")), Message::ButtonPressed22),
+        add_button(&mut selfx.button_state23, shiftfn(String::from("x")), Message::ButtonPressed23),
+        add_button(&mut selfx.button_state24, shiftfn(String::from("y")), Message::ButtonPressed24),
+        add_button(&mut selfx.button_state25, shiftfn(String::from("z")), Message::ButtonPressed25),
+    ];
+    let buttons2 = [
+        add_button(&mut selfx.button_state26, shiftfn(String::from("ẳ")), Message::ButtonPressed26),
+        add_button(&mut selfx.button_state27, shiftfn(String::from("á")), Message::ButtonPressed27),
+        add_button(&mut selfx.button_state28, shiftfn(String::from("â")), Message::ButtonPressed28),
+        add_button(&mut selfx.button_state29, shiftfn(String::from("à")), Message::ButtonPressed29),
+        add_button(&mut selfx.button_state30, shiftfn(String::from("ạ")), Message::ButtonPressed30),
+        add_button(&mut selfx.button_state31, shiftfn(String::from("ầ")), Message::ButtonPressed31),
+        add_button(&mut selfx.button_state32, shiftfn(String::from("ậ")), Message::ButtonPressed32),
+        add_button(&mut selfx.button_state33, shiftfn(String::from("ấ")), Message::ButtonPressed33),
+        add_button(&mut selfx.button_state34, shiftfn(String::from("ả")), Message::ButtonPressed34),
+        add_button(&mut selfx.button_state35, shiftfn(String::from("ặ")), Message::ButtonPressed35),
+        add_button(&mut selfx.button_state36, shiftfn(String::from("đ")), Message::ButtonPressed36),
+        add_button(&mut selfx.button_state37, shiftfn(String::from("ỏ")), Message::ButtonPressed37),
+        add_button(&mut selfx.button_state38, shiftfn(String::from("ơ")), Message::ButtonPressed38),
+        add_button(&mut selfx.button_state39, shiftfn(String::from("ờ")), Message::ButtonPressed39),
+        add_button(&mut selfx.button_state40, shiftfn(String::from("ồ")), Message::ButtonPressed40),
+        add_button(&mut selfx.button_state41, shiftfn(String::from("ó")), Message::ButtonPressed41),
+        add_button(&mut selfx.button_state42, shiftfn(String::from("ô")), Message::ButtonPressed42),
+        add_button(&mut selfx.button_state43, shiftfn(String::from("ọ")), Message::ButtonPressed43),
+        add_button(&mut selfx.button_state44, shiftfn(String::from("ộ")), Message::ButtonPressed44),
+        add_button(&mut selfx.button_state45, shiftfn(String::from("ớ")), Message::ButtonPressed45),
+        add_button(&mut selfx.button_state46, shiftfn(String::from("ở")), Message::ButtonPressed46),
+        add_button(&mut selfx.button_state47, shiftfn(String::from("ư")), Message::ButtonPressed47),
+        add_button(&mut selfx.button_state48, shiftfn(String::from("ụ")), Message::ButtonPressed48),
+        add_button(&mut selfx.button_state49, shiftfn(String::from("ữ")), Message::ButtonPressed49),
+        add_button(&mut selfx.button_state50, shiftfn(String::from("ú")), Message::ButtonPressed50),
+        add_button(&mut selfx.button_state51, shiftfn(String::from("ủ")), Message::ButtonPressed51),
+        add_button(&mut selfx.button_state52, shiftfn(String::from("í")), Message::ButtonPressed52),
+        add_button(&mut selfx.button_state53, shiftfn(String::from("ì")), Message::ButtonPressed53),
+        add_button(&mut selfx.button_state54, shiftfn(String::from("ị")), Message::ButtonPressed54),
+        add_button(&mut selfx.button_state55, shiftfn(String::from("ế")), Message::ButtonPressed55),
+        add_button(&mut selfx.button_state56, shiftfn(String::from("ẹ")), Message::ButtonPressed56),
+        add_button(&mut selfx.button_state57, shiftfn(String::from("ể")), Message::ButtonPressed57),
+        add_button(&mut selfx.button_state58, shiftfn(String::from("ề")), Message::ButtonPressed58),
+    ];
+    let buttons3 = [
+        add_button(&mut selfx.button_state59, shiftfn(String::from("(")), Message::ButtonPressed59),
+        add_button(&mut selfx.button_state60, shiftfn(String::from(")")), Message::ButtonPressed60),
+        add_button(&mut selfx.button_state61, shiftfn(String::from(";")), Message::ButtonPressed61),
+        add_button(&mut selfx.button_state62, shiftfn(String::from(":")), Message::ButtonPressed62),
+        add_button(&mut selfx.button_state63, shiftfn(String::from(",")), Message::ButtonPressed63),
+        add_button(&mut selfx.button_state64, shiftfn(String::from(".")), Message::ButtonPressed64),
+        add_button(&mut selfx.button_state65, shiftfn(String::from("?")), Message::ButtonPressed65),
+        add_button(&mut selfx.button_state66, shiftfn(String::from("!")), Message::ButtonPressed66),
+    ];
+    let shift = add_button(&mut selfx.shift_state, String::from("shift"), Message::ShiftButton);
+    let submit = add_button(&mut selfx.submit_state, String::from("submit"), Message::SubmitButton);
+    let space = add_button(&mut selfx.space_state, String::from("space"), Message::SpaceButton);
+    let delete = add_button(&mut selfx.delete_state, String::from("delete"), Message::DeleteButton);
+    let deleteall = add_button(&mut selfx.deleteall_state, String::from("deleteall"), Message::DeleteallButton);
+    let next = add_button(&mut selfx.next_state, String::from("next"), Message::NextButton);
+    let mut userrow = Row::new();
+    userrow = userrow.push(shift);
+    userrow = userrow.push(submit);
+    userrow = userrow.push(space);
+    userrow = userrow.push(delete);
+    userrow = userrow.push(deleteall);
+    userrow = userrow.push(next);
+    let mut row1 = Row::new();
+    for button in buttons1 {
+        row1 = row1.push(button);
+    };
+    let mut row2 = Row::new();
+    for button in buttons2 {
+        row2 = row2.push(button);
+    };
+    let mut row3 = Row::new();
+    for button in buttons3 {
+        row3 = row3.push(button);
+    };
+    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
+    let utilrow = Row::new().push(exit);
+    let column1 = Column::new().push(utilrow.width(Length::Fill)).push(texttype).push(english).push(text1).push(userrow).push(row1).push(row2).push(row3).width(Length::Fill).align_items(iced::Alignment::Center);
+    Container::new(column1)
+    .padding(100)
+    .width(Length::Fill)
+    .height(Length::Fill)
+    .center_x()
+    .center_y()
+    .into()}
 fn nextfn() {
-N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..13);
-LETTERS.lock_mut().unwrap().clear();
-COLOUR.lock_mut().unwrap()[0] = 0
+    N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
+    LETTERS.lock_mut().unwrap().clear();
+    COLOUR.lock_mut().unwrap()[0] = 0
+}
+fn loaddata() {
+    let connection = sqlite::open("./English-Vietnamese.sqlite3").unwrap();
+    let mut statement2 = connection
+    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+    .unwrap();
+    let mut tables: Vec<String> = Vec::new();
+    while let Ok(State::Row) = statement2.next() {
+        tables.push(statement2.read::<String>(0).unwrap())
+    }
+    let mut statement = connection
+        .prepare(format!("SELECT * FROM {}", tables[TABLE.lock_mut().unwrap()[0]]))
+        .unwrap();
+    let mut vietnamese: Vec<String> = Vec::new();
+    let mut english: Vec<String> = Vec::new();
+    let mut typename: Vec<String> = Vec::new();
+    while let Ok(State::Row) = statement.next() {
+        english.push(statement.read::<String>(0).unwrap());
+        vietnamese.push(statement.read::<String>(1).unwrap());
+        typename.push(statement.read::<String>(2).unwrap());
+    }
+    ENGLISH.lock_mut().unwrap().clear();
+    VIETNAMESE.lock_mut().unwrap().clear();
+    TEXTTYPE.lock_mut().unwrap().clear();
+    for i in english {
+        ENGLISH.lock_mut().unwrap().push(i);
+    }
+    for i in vietnamese {
+        VIETNAMESE.lock_mut().unwrap().push(i);
+    }
+    for i in typename {
+        TEXTTYPE.lock_mut().unwrap().push(i);
+    }
 }
 impl Application for MyButton {
     type Message = Message;
     type Executor = executor::Default;
     type Flags = ();
-
     fn subscription(&self) -> Subscription<Message> {
-
         iced_native::subscription::events().map(Message::EventOccurred)
-
     }
-
     fn new(_flags: ()) -> (MyButton, Command<Message>) {
-
         (MyButton::default(), Command::none())
-
     }
 
   fn title(&self) -> String {
@@ -238,6 +404,9 @@ impl Application for MyButton {
    }
   fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+      Message::GotoMainButton => SCREEN.lock_mut().unwrap()[0] = 0,
+      Message::BasicButton => index(0),
+      Message::IntermediateButton => index(1),
       Message::ShiftButton => shiftvaluefn(),
       Message::SubmitButton => sumbitfn(),
       Message::SpaceButton => pushfn(String::from(" ")),
@@ -311,199 +480,92 @@ impl Application for MyButton {
         Message::ButtonPressed64 => pushfn(String::from(".")),
         Message::ButtonPressed65 => pushfn(String::from("?")),
         Message::ButtonPressed66 => pushfn(String::from("!")),
-      Message::EventOccurred(event) => {          if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
-              pushfn(String::from(" "))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {
-              shiftvaluefn()
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _ }) = event {
-              nextfn()
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {
-              sumbitfn()
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Backspace, modifiers: _ }) = event {
-              popfn()
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::A, modifiers: _ }) = event {
-              pushfn(String::from("a"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::B, modifiers: _ }) = event {
-              pushfn(String::from("b"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::C, modifiers: _ }) = event {
-              pushfn(String::from("c"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::D, modifiers: _ }) = event {
-              pushfn(String::from("d"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::E, modifiers: _ }) = event {
-              pushfn(String::from("e"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::F, modifiers: _ }) = event {
-              pushfn(String::from("f"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::G, modifiers: _ }) = event {
-              pushfn(String::from("g"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::H, modifiers: _ }) = event {
-              pushfn(String::from("h"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::I, modifiers: _ }) = event {
-              pushfn(String::from("i"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::J, modifiers: _ }) = event {
-              pushfn(String::from("j"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::K, modifiers: _ }) = event {
-              pushfn(String::from("k"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::L, modifiers: _ }) = event {
-              pushfn(String::from("l"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::M, modifiers: _ }) = event {
-              pushfn(String::from("m"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::N, modifiers: _ }) = event {
-              pushfn(String::from("n"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::O, modifiers: _ }) = event {
-              pushfn(String::from("o"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::P, modifiers: _ }) = event {
-              pushfn(String::from("p"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Q, modifiers: _ }) = event {
-              pushfn(String::from("q"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::R, modifiers: _ }) = event {
-              pushfn(String::from("r"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::S, modifiers: _ }) = event {
-              pushfn(String::from("s"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::T, modifiers: _ }) = event {
-              pushfn(String::from("t"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::U, modifiers: _ }) = event {
-              pushfn(String::from("u"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::V, modifiers: _ }) = event {
-              pushfn(String::from("v"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::W, modifiers: _ }) = event {
-              pushfn(String::from("w"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::X, modifiers: _ }) = event {
-              pushfn(String::from("x"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Y, modifiers: _ }) = event {
-              pushfn(String::from("y"))
-          } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Z, modifiers: _ }) = event {
-              pushfn(String::from("z"))
-          }      }      }
-      Command::none()
+        Message::EventOccurred(event) => {
+        if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
+            pushfn(String::from(" "))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {
+            shiftvaluefn()
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _ }) = event {
+            nextfn()
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {
+            sumbitfn()
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Backspace, modifiers: _ }) = event {
+            popfn()
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::A, modifiers: _ }) = event {
+                        pushfn(String::from("a"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::B, modifiers: _ }) = event {
+                        pushfn(String::from("b"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::C, modifiers: _ }) = event {
+                        pushfn(String::from("c"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::D, modifiers: _ }) = event {
+                        pushfn(String::from("d"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::E, modifiers: _ }) = event {
+                        pushfn(String::from("e"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::F, modifiers: _ }) = event {
+                        pushfn(String::from("f"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::G, modifiers: _ }) = event {
+                        pushfn(String::from("g"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::H, modifiers: _ }) = event {
+                        pushfn(String::from("h"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::I, modifiers: _ }) = event {
+                        pushfn(String::from("i"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::J, modifiers: _ }) = event {
+                        pushfn(String::from("j"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::K, modifiers: _ }) = event {
+                        pushfn(String::from("k"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::L, modifiers: _ }) = event {
+                        pushfn(String::from("l"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::M, modifiers: _ }) = event {
+                        pushfn(String::from("m"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::N, modifiers: _ }) = event {
+                        pushfn(String::from("n"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::O, modifiers: _ }) = event {
+                        pushfn(String::from("o"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::P, modifiers: _ }) = event {
+                        pushfn(String::from("p"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Q, modifiers: _ }) = event {
+                        pushfn(String::from("q"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::R, modifiers: _ }) = event {
+                        pushfn(String::from("r"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::S, modifiers: _ }) = event {
+                        pushfn(String::from("s"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::T, modifiers: _ }) = event {
+                        pushfn(String::from("t"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::U, modifiers: _ }) = event {
+                        pushfn(String::from("u"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::V, modifiers: _ }) = event {
+                        pushfn(String::from("v"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::W, modifiers: _ }) = event {
+                        pushfn(String::from("w"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::X, modifiers: _ }) = event {
+                        pushfn(String::from("x"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Y, modifiers: _ }) = event {
+                        pushfn(String::from("y"))
+        } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Z, modifiers: _ }) = event {
+                        pushfn(String::from("z"))
+      }
+        },
+    };
+    Command::none()
     }
 
   fn view(&mut self) -> Element<Message> {
-      fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
-
-          return Button::new(a, Text::new(format!("{}",b))).on_press(c);
-
-      }
-        let tables = ["Prepositions"];
-        let english = ["hers", "yes", "can, to be able to", "can not, don't be able to", "to do", "at, in", "with", "very (general comment/opinion - placed before the adjective)", "about", "one, a, an", "please", "must, right, right side", "left (side)"];
-        for i in english {
-           ENGLISH.lock_mut().unwrap().push(i)
-        }
-        let texttype = Text::new(format!("{}",tables[0] )).height(Length::Units(30)).size(20).color(Color::from_rgb(1.0,0.0,1.0));
-        let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(100)).size(80);
-        let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-        let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(100)).size(80).color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let buttons1 = [
-        add_button(&mut self.button_state0, shiftfn(String::from("a")), Message::ButtonPressed0),
-        add_button(&mut self.button_state1, shiftfn(String::from("b")), Message::ButtonPressed1),
-        add_button(&mut self.button_state2, shiftfn(String::from("c")), Message::ButtonPressed2),
-        add_button(&mut self.button_state3, shiftfn(String::from("d")), Message::ButtonPressed3),
-        add_button(&mut self.button_state4, shiftfn(String::from("e")), Message::ButtonPressed4),
-        add_button(&mut self.button_state5, shiftfn(String::from("f")), Message::ButtonPressed5),
-        add_button(&mut self.button_state6, shiftfn(String::from("g")), Message::ButtonPressed6),
-        add_button(&mut self.button_state7, shiftfn(String::from("h")), Message::ButtonPressed7),
-        add_button(&mut self.button_state8, shiftfn(String::from("i")), Message::ButtonPressed8),
-        add_button(&mut self.button_state9, shiftfn(String::from("j")), Message::ButtonPressed9),
-        add_button(&mut self.button_state10, shiftfn(String::from("k")), Message::ButtonPressed10),
-        add_button(&mut self.button_state11, shiftfn(String::from("l")), Message::ButtonPressed11),
-        add_button(&mut self.button_state12, shiftfn(String::from("m")), Message::ButtonPressed12),
-        add_button(&mut self.button_state13, shiftfn(String::from("n")), Message::ButtonPressed13),
-        add_button(&mut self.button_state14, shiftfn(String::from("o")), Message::ButtonPressed14),
-        add_button(&mut self.button_state15, shiftfn(String::from("p")), Message::ButtonPressed15),
-        add_button(&mut self.button_state16, shiftfn(String::from("q")), Message::ButtonPressed16),
-        add_button(&mut self.button_state17, shiftfn(String::from("r")), Message::ButtonPressed17),
-        add_button(&mut self.button_state18, shiftfn(String::from("s")), Message::ButtonPressed18),
-        add_button(&mut self.button_state19, shiftfn(String::from("t")), Message::ButtonPressed19),
-        add_button(&mut self.button_state20, shiftfn(String::from("u")), Message::ButtonPressed20),
-        add_button(&mut self.button_state21, shiftfn(String::from("v")), Message::ButtonPressed21),
-        add_button(&mut self.button_state22, shiftfn(String::from("w")), Message::ButtonPressed22),
-        add_button(&mut self.button_state23, shiftfn(String::from("x")), Message::ButtonPressed23),
-        add_button(&mut self.button_state24, shiftfn(String::from("y")), Message::ButtonPressed24),
-        add_button(&mut self.button_state25, shiftfn(String::from("z")), Message::ButtonPressed25),
-    ];
-    let buttons2 = [
-        add_button(&mut self.button_state26, shiftfn(String::from("ẳ")), Message::ButtonPressed26),
-        add_button(&mut self.button_state27, shiftfn(String::from("á")), Message::ButtonPressed27),
-        add_button(&mut self.button_state28, shiftfn(String::from("â")), Message::ButtonPressed28),
-        add_button(&mut self.button_state29, shiftfn(String::from("à")), Message::ButtonPressed29),
-        add_button(&mut self.button_state30, shiftfn(String::from("ạ")), Message::ButtonPressed30),
-        add_button(&mut self.button_state31, shiftfn(String::from("ầ")), Message::ButtonPressed31),
-        add_button(&mut self.button_state32, shiftfn(String::from("ậ")), Message::ButtonPressed32),
-        add_button(&mut self.button_state33, shiftfn(String::from("ấ")), Message::ButtonPressed33),
-        add_button(&mut self.button_state34, shiftfn(String::from("ả")), Message::ButtonPressed34),
-        add_button(&mut self.button_state35, shiftfn(String::from("ặ")), Message::ButtonPressed35),
-        add_button(&mut self.button_state36, shiftfn(String::from("đ")), Message::ButtonPressed36),
-        add_button(&mut self.button_state37, shiftfn(String::from("ỏ")), Message::ButtonPressed37),
-        add_button(&mut self.button_state38, shiftfn(String::from("ơ")), Message::ButtonPressed38),
-        add_button(&mut self.button_state39, shiftfn(String::from("ờ")), Message::ButtonPressed39),
-        add_button(&mut self.button_state40, shiftfn(String::from("ồ")), Message::ButtonPressed40),
-        add_button(&mut self.button_state41, shiftfn(String::from("ó")), Message::ButtonPressed41),
-        add_button(&mut self.button_state42, shiftfn(String::from("ô")), Message::ButtonPressed42),
-        add_button(&mut self.button_state43, shiftfn(String::from("ọ")), Message::ButtonPressed43),
-        add_button(&mut self.button_state44, shiftfn(String::from("ộ")), Message::ButtonPressed44),
-        add_button(&mut self.button_state45, shiftfn(String::from("ớ")), Message::ButtonPressed45),
-        add_button(&mut self.button_state46, shiftfn(String::from("ở")), Message::ButtonPressed46),
-        add_button(&mut self.button_state47, shiftfn(String::from("ư")), Message::ButtonPressed47),
-        add_button(&mut self.button_state48, shiftfn(String::from("ụ")), Message::ButtonPressed48),
-        add_button(&mut self.button_state49, shiftfn(String::from("ữ")), Message::ButtonPressed49),
-        add_button(&mut self.button_state50, shiftfn(String::from("ú")), Message::ButtonPressed50),
-        add_button(&mut self.button_state51, shiftfn(String::from("ủ")), Message::ButtonPressed51),
-        add_button(&mut self.button_state52, shiftfn(String::from("í")), Message::ButtonPressed52),
-        add_button(&mut self.button_state53, shiftfn(String::from("ì")), Message::ButtonPressed53),
-        add_button(&mut self.button_state54, shiftfn(String::from("ị")), Message::ButtonPressed54),
-        add_button(&mut self.button_state55, shiftfn(String::from("ế")), Message::ButtonPressed55),
-        add_button(&mut self.button_state56, shiftfn(String::from("ẹ")), Message::ButtonPressed56),
-        add_button(&mut self.button_state57, shiftfn(String::from("ể")), Message::ButtonPressed57),
-        add_button(&mut self.button_state58, shiftfn(String::from("ề")), Message::ButtonPressed58),
-    ];
-    let buttons3 = [
-        add_button(&mut self.button_state59, shiftfn(String::from("(")), Message::ButtonPressed59),
-        add_button(&mut self.button_state60, shiftfn(String::from(")")), Message::ButtonPressed60),
-        add_button(&mut self.button_state61, shiftfn(String::from(";")), Message::ButtonPressed61),
-        add_button(&mut self.button_state62, shiftfn(String::from(":")), Message::ButtonPressed62),
-        add_button(&mut self.button_state63, shiftfn(String::from(",")), Message::ButtonPressed63),
-        add_button(&mut self.button_state64, shiftfn(String::from(".")), Message::ButtonPressed64),
-        add_button(&mut self.button_state65, shiftfn(String::from("?")), Message::ButtonPressed65),
-        add_button(&mut self.button_state66, shiftfn(String::from("!")), Message::ButtonPressed66),
-    ];
-    let shift = add_button(&mut self.shift_state, String::from("shift"), Message::ShiftButton);
-    let submit = add_button(&mut self.submit_state, String::from("submit"), Message::SubmitButton);
-    let space = add_button(&mut self.space_state, String::from("space"), Message::SpaceButton);
-    let delete = add_button(&mut self.delete_state, String::from("delete"), Message::DeleteButton);
-    let deleteall = add_button(&mut self.deleteall_state, String::from("deleteall"), Message::DeleteallButton);
-    let next = add_button(&mut self.next_state, String::from("next"), Message::NextButton);
-    let mut userrow = Row::new();
-    userrow = userrow.push(shift);
-    userrow = userrow.push(submit);
-    userrow = userrow.push(space);
-    userrow = userrow.push(delete);
-    userrow = userrow.push(deleteall);
-    userrow = userrow.push(next);
-    let mut row1 = Row::new();
-    for button in buttons1 {
-        row1 = row1.push(button);
-    };
-    let mut row2 = Row::new();
-    for button in buttons2 {
-        row2 = row2.push(button);
-    };
-    let mut row3 = Row::new();
-    for button in buttons3 {
-        row3 = row3.push(button);
-    };
-    let column1 = Column::new().push(texttype).push(english).push(text1).push(userrow).push(row1).push(row2).push(row3).width(Length::Fill).align_items(iced::Alignment::Center);
-    Container::new(column1)
-    .padding(100)
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .center_x()
-    .center_y()
-    .into()
+      if SCREEN.lock_mut().unwrap()[0] == 0 {
+          return makemain(self);
+      } else if SCREEN.lock_mut().unwrap()[0] == 1 {
+          return makelevel(self);
+      } else {
+          return makemain(self); 
+      } 
     }
 }
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
-    N.lock_mut().unwrap().push(thread_rng().gen_range(0..13));
+    TABLE.lock_mut().unwrap().push(0);
+    loaddata();
+    N.lock_mut().unwrap().push(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()));
     COLOUR.lock_mut().unwrap().push(0);
+    SCREEN.lock_mut().unwrap().push(0);
     X.lock_mut().unwrap().push(0);
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {

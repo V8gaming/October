@@ -7,11 +7,11 @@ cargo run --bin generator; cargo run --bin generated
 ```
 
 ## Todo
-- [ ] Convert Sandbox to Application
-- [ ] Keypresses
+- [x] Convert Sandbox to Application
+- [x] Keypresses
 - [ ] Timer
 - [ ] Main page
-- [ ] Remake database as (table name = level. data = [english, vietnamese, type])
+- [x] Remake database as (table name = level. data = [english, vietnamese, type])
 - [ ] Language Page
 - [ ] Options Page
 
