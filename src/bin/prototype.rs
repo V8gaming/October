@@ -73,6 +73,9 @@ fn shiftvaluefn() {
 
 fn shiftscreenfn(destination: usize) {
     SCREEN.lock_mut().unwrap()[0] = destination;
+    N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
+    LETTERS.lock_mut().unwrap().clear();
+    COLOUR.lock_mut().unwrap()[0] = 0
 }
 
 fn sumbitfn() {
@@ -80,10 +83,12 @@ fn sumbitfn() {
     
     if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
         println!("true");
-        COLOUR.lock_mut().unwrap()[0] = 2
+        COLOUR.lock_mut().unwrap()[0] = 2;
+        SCREEN.lock_mut().unwrap()[0] = 2
     } else {
         println!("false");
-        COLOUR.lock_mut().unwrap()[0] = 1
+        COLOUR.lock_mut().unwrap()[0] = 1;
+        SCREEN.lock_mut().unwrap()[0] = 2
     }
 }
 
@@ -164,6 +169,28 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
         .height(Length::Fill)
         .center_x()
         .center_y()
+        .into();
+    return main;
+}
+fn makereview(selfx: &mut MyButton) -> Element<Message>{
+    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
+    let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
+
+    let subtitle1 = Text::new("Your answer").color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let subtitle2 = Text::new("Vietnamese");
+    let subtitle3 = Text::new("English");
+    
+    let youranswer = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
+    let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
+
+    let resume = add_button(&mut selfx.gototesting_state, String::from("Resume"), Message::GotoTestingButton);
+    let column = Column::new().push(exit).push(subtitle1).push(youranswer).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
+    let main: Element<Message> = Container::new(column)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
         .into();
     return main;
 }
@@ -263,6 +290,8 @@ impl Application for MyButton {
             return makemain(self);
         } else if SCREEN.lock_mut().unwrap()[0] == 1 {
             return makelevel(self);
+        } else if SCREEN.lock_mut().unwrap()[0] == 2 {
+            return makereview(self);
         } else {
             return makemain(self);
         }

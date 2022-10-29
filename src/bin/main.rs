@@ -19,6 +19,7 @@ static SCREEN: Global<Vec<usize>> = Global::new();
 #[derive(Default, Clone)]
 struct MyButton {
     gotomain_state: button::State,
+    resume_state: button::State,
     basic_state: button::State,
     intermediate_state: button::State,
     shift_state: button::State,
@@ -99,6 +100,7 @@ struct MyButton {
 #[derive(Debug, Clone)]enum Message {
     EventOccurred(iced_native::Event),
     GotoMainButton,
+    ResumeButton,
     BasicButton,
     IntermediateButton,
     ShiftButton,
@@ -180,6 +182,12 @@ fn pushfn(letter:String) {
     println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
         COLOUR.lock_mut().unwrap()[0] = 0
 }
+fn shiftscreenfn(destination: usize) {
+   SCREEN.lock_mut().unwrap()[0] = destination;
+   N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
+   LETTERS.lock_mut().unwrap().clear();
+   COLOUR.lock_mut().unwrap()[0] = 0;
+}
 fn shiftfn(letter: String) -> String {
     if X.lock_mut().unwrap()[0] == 1 {
         return letter.to_uppercase();
@@ -197,10 +205,10 @@ fn shiftvaluefn() {
 fn sumbitfn() {
     if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
         COLOUR.lock_mut().unwrap()[0] = 2;
-        println!("true")
+        SCREEN.lock_mut().unwrap()[0] = 2;
     } else {
         COLOUR.lock_mut().unwrap()[0] = 1;
-        println!("false")
+        SCREEN.lock_mut().unwrap()[0] = 2;
     }
 }
 fn popfn() {
@@ -234,6 +242,25 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
         .height(Length::Fill)
         .center_x()
         .center_y()
+        .into();
+    return main;
+}
+fn makereview(selfx: &mut MyButton) -> Element<Message>{
+    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
+    let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
+    let subtitle1 = Text::new("Your answer").color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let subtitle2 = Text::new("Vietnamese");
+    let subtitle3 = Text::new("English");
+    let youranswer = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
+    let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
+    let resume = add_button(&mut selfx.resume_state, String::from("Resume"), Message::ResumeButton);
+    let column = Column::new().push(exit).push(subtitle1).push(youranswer).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
+    let main: Element<Message> = Container::new(column)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
         .into();
     return main;
 }
@@ -404,7 +431,8 @@ impl Application for MyButton {
    }
   fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-      Message::GotoMainButton => SCREEN.lock_mut().unwrap()[0] = 0,
+      Message::GotoMainButton => shiftscreenfn(0),
+      Message::ResumeButton => shiftscreenfn(1),
       Message::BasicButton => index(0),
       Message::IntermediateButton => index(1),
       Message::ShiftButton => shiftvaluefn(),
@@ -554,6 +582,8 @@ impl Application for MyButton {
           return makemain(self);
       } else if SCREEN.lock_mut().unwrap()[0] == 1 {
           return makelevel(self);
+      } else if SCREEN.lock_mut().unwrap()[0] == 2 {
+          return makereview(self);
       } else {
           return makemain(self); 
       } 

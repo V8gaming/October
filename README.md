@@ -13,10 +13,11 @@ cargo run --bin generator; cargo run --bin generated
 - [x] Convert Sandbox to Application
 - [x] Keypresses
 - [ ] Timer
-- [ ] Main page
+- [x] Main page
 - [x] Remake database as (table name = level. data = [english, vietnamese, type])
 - [ ] Language Page
 - [ ] Options Page
+- [x] Review Page
 
 ## Future
 
