@@ -15,7 +15,7 @@ cargo run --bin generator; cargo run --bin generated
 - [ ] Timer
 - [x] Main page
 - [x] Remake database as (table name = level. data = [english, vietnamese, type])
-- [ ] Language Page
+- [ ] Language Page - change loaded tables based on database loaded
 - [ ] Options Page
 - [x] Review Page
 

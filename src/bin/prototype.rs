@@ -1,4 +1,6 @@
-use iced::{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor};
+use std::fs;
+
+use iced::{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
@@ -14,6 +16,7 @@ static COLOUR: Global<Vec<usize>> = Global::new();
 static X: Global<Vec<usize>> = Global::new();
 static SCREEN: Global<Vec<usize>> = Global::new();
 static TABLE: Global<Vec<usize>> = Global::new();
+static LANG: Global<Vec<usize>> = Global::new();
 
 
 #[derive(Default, Clone, Debug)]
@@ -21,6 +24,7 @@ struct MyButton {
     reload_state: button::State,
     gotomain_state: button::State,
     gototesting_state: button::State,
+    gotolang_state: button::State,
     shift_state: button::State,
     next_state: button::State,
     submit_state: button::State,
@@ -30,6 +34,9 @@ struct MyButton {
     button_state1: button::State,
     button_state2: button::State,
     button_state3: button::State,
+    lang_state0: button::State,
+    lang_state1: button::State,
+
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +45,7 @@ enum Message {
     ReloadButton,
     GotoMainButton,
     GotoTestingButton,
+    GotoLangButton,
     ShiftButton,
     NextButton,
     SubmitButton,
@@ -47,6 +55,8 @@ enum Message {
     ButtonPressed1,
     ButtonPressed2,
     ButtonPressed3,
+    LangButton0,
+    LangButton1,
 }
 
 fn pushfn(letter: String) {
@@ -123,7 +133,12 @@ fn index() {
     nextfn();
 }
 fn loaddata() {
-    let connection = sqlite::open("./English-Vietnamese.sqlite3").unwrap();
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        //println!("{}", file.unwrap().path().display());
+        languages.push(file.unwrap().path().display().to_string())
+    }
+    let connection = sqlite::open(format!("{}", languages[LANG.lock_mut().unwrap()[0]])).unwrap();
     
     let mut statement2 = connection
     .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
@@ -161,9 +176,29 @@ fn loaddata() {
         VIETNAMESE.lock_mut().unwrap().push(i)
     }
 }
-
+fn changelang(num: usize) {
+    LANG.lock_mut().unwrap()[0] = num;
+    shiftscreenfn(0);
+    loaddata();
+}
+fn makelang(selfx: &mut MyButton) -> Element<Message>{
+    let lang0 = add_button(&mut selfx.lang_state0, String::from("Lang0"), Message::LangButton0);
+    let lang1 = add_button(&mut selfx.lang_state1, String::from("Lang1"), Message::LangButton1);
+    let langcolumn = Column::new().push(lang0).push(lang1);
+    let main: Element<Message> = Container::new(langcolumn)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
+        .center_y()
+        .into();
+    return main;
+}
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
-    let main: Element<Message> = Container::new(add_button(&mut selfx.gototesting_state, String::from("Enter Testing"), Message::GotoTestingButton))
+    let enter = add_button(&mut selfx.gototesting_state, String::from("Enter Testing"), Message::GotoTestingButton);
+    let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
+    let maincolumn = Column::new().push(enter).push(langs);
+    let main: Element<Message> = Container::new(maincolumn)
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
@@ -176,16 +211,16 @@ fn makereview(selfx: &mut MyButton) -> Element<Message>{
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
 
-    let subtitle1 = Text::new("Your answer").color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let subtitle2 = Text::new("Vietnamese");
-    let subtitle3 = Text::new("English");
+    let subtitle1 = Text::new("Your response").color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle2 = Text::new("Vietnamese").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle3 = Text::new("English").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
     
-    let youranswer = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let response = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
     let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
     let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
 
     let resume = add_button(&mut selfx.gototesting_state, String::from("Resume"), Message::GotoTestingButton);
-    let column = Column::new().push(exit).push(subtitle1).push(youranswer).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
+    let column = Column::new().push(exit).push(subtitle1).push(response).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
     let main: Element<Message> = Container::new(column)
         .padding(100)
         .width(Length::Fill)
@@ -257,12 +292,15 @@ impl Application for MyButton {
         match message {
             Message::ReloadButton => index(),
             Message::GotoMainButton => shiftscreenfn(0),
+            Message::GotoLangButton => shiftscreenfn(3),
             Message::GotoTestingButton => shiftscreenfn(1),
             Message::SubmitButton => sumbitfn(),
             Message::SpaceButton => pushfn(String::from(" ")),
             Message::DeleteButton => popfn(),
             Message::NextButton => nextfn(),
             Message::ShiftButton => shiftvaluefn(),
+            Message::LangButton0 => changelang(0),
+            Message::LangButton1 => changelang(1),
             Message::ButtonPressed0 => pushfn(String::from("a")),
             Message::ButtonPressed1 => pushfn(String::from("b")),
             Message::ButtonPressed2 => pushfn(String::from("c")),
@@ -292,6 +330,8 @@ impl Application for MyButton {
             return makelevel(self);
         } else if SCREEN.lock_mut().unwrap()[0] == 2 {
             return makereview(self);
+        } else if SCREEN.lock_mut().unwrap()[0] == 3 {
+            return makelang(self);
         } else {
             return makemain(self);
         }
@@ -304,11 +344,13 @@ impl Application for MyButton {
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
     TABLE.lock_mut().unwrap().push(0);
+    LANG.lock_mut().unwrap().push(0);
     loaddata();
     N.lock_mut().unwrap().push(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()));
     COLOUR.lock_mut().unwrap().push(0);
     X.lock_mut().unwrap().push(0);
     SCREEN.lock_mut().unwrap().push(0);
+    
 
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {

@@ -1,11 +1,12 @@
 #![windows_subsystem = "windows"]
-use iced::{Application,Command, Subscription, executor, button, Button, Element, Settings, Text, Container, Length, Column, Row, window, Color};
+use iced::{alignment,Application,Command, Subscription, executor, button, Button, Element, Settings, Text, Container, Length, Column, Row, window, Color};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
 use sqlite::State;
 use iced_native::{Event, keyboard};
+use std::fs;
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<String>> = Global::new();
 static VIETNAMESE: Global<Vec<String>> = Global::new();
@@ -15,13 +16,16 @@ static X: Global<Vec<usize>> = Global::new();
 static TABLE: Global<Vec<usize>> = Global::new();
 static TEXTTYPE: Global<Vec<String>> = Global::new();
 static SCREEN: Global<Vec<usize>> = Global::new();
+static LANG: Global<Vec<usize>> = Global::new();
 
 #[derive(Default, Clone)]
 struct MyButton {
     gotomain_state: button::State,
+    gotolang_state: button::State,
     resume_state: button::State,
     basic_state: button::State,
     intermediate_state: button::State,
+    Advanced_state: button::State,
     shift_state: button::State,
     submit_state: button::State,
     space_state: button::State,
@@ -95,14 +99,18 @@ struct MyButton {
     button_state64: button::State,
     button_state65: button::State,
     button_state66: button::State,
+    lang_state0: button::State,
+    lang_state1: button::State,
 }
 
 #[derive(Debug, Clone)]enum Message {
     EventOccurred(iced_native::Event),
     GotoMainButton,
+    GotoLangButton,
     ResumeButton,
     BasicButton,
     IntermediateButton,
+    AdvancedButton,
     ShiftButton,
     SubmitButton,
     SpaceButton,
@@ -176,6 +184,8 @@ struct MyButton {
     ButtonPressed64,
     ButtonPressed65,
     ButtonPressed66,
+    LangButton0,
+    LangButton1,
 }
 fn pushfn(letter:String) {
     LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
@@ -235,8 +245,20 @@ fn index(num: usize) {
     nextfn();
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
-    let maincolumn = Column::new().push(add_button(&mut selfx.basic_state, String::from("Enter basic"), Message::BasicButton)).push(add_button(&mut selfx.intermediate_state, String::from("Enter intermediate"), Message::IntermediateButton))    ;
+    let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
+    let maincolumn = Column::new().push(langs).push(add_button(&mut selfx.basic_state, String::from("Enter basic"), Message::BasicButton)).push(add_button(&mut selfx.intermediate_state, String::from("Enter intermediate"), Message::IntermediateButton)).push(add_button(&mut selfx.Advanced_state, String::from("Enter Advanced"), Message::AdvancedButton));
     let main: Element<Message> = Container::new(maincolumn)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
+        .center_y()
+        .into();
+    return main;
+}
+fn makelang(selfx: &mut MyButton) -> Element<Message>{
+    let langcolumn = Column::new().push(add_button(&mut selfx.lang_state0, String::from("English-Vietnamese.sqlite3"), Message::LangButton0)).push(add_button(&mut selfx.lang_state1, String::from("test.sqlite3"), Message::LangButton1))    ;
+    let main: Element<Message> = Container::new(langcolumn)
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
@@ -248,9 +270,9 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
 fn makereview(selfx: &mut MyButton) -> Element<Message>{
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    let subtitle1 = Text::new("Your answer").color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let subtitle2 = Text::new("Vietnamese");
-    let subtitle3 = Text::new("English");
+    let subtitle1 = Text::new("Your answer").color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle2 = Text::new("Vietnamese").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle3 = Text::new("English").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
     let youranswer = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
     let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
     let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
@@ -382,8 +404,17 @@ fn nextfn() {
     LETTERS.lock_mut().unwrap().clear();
     COLOUR.lock_mut().unwrap()[0] = 0
 }
+fn changelang(num: usize) {
+    LANG.lock_mut().unwrap()[0] = num;
+    shiftscreenfn(0);
+    loaddata();
+}
 fn loaddata() {
-    let connection = sqlite::open("./English-Vietnamese.sqlite3").unwrap();
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        languages.push(file.unwrap().path().display().to_string())
+    }
+    let connection = sqlite::open(format!("{}", languages[LANG.lock_mut().unwrap()[0]])).unwrap();
     let mut statement2 = connection
     .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
     .unwrap();
@@ -432,9 +463,11 @@ impl Application for MyButton {
   fn update(&mut self, message: Message) -> Command<Message> {
         match message {
       Message::GotoMainButton => shiftscreenfn(0),
+      Message::GotoLangButton => shiftscreenfn(3),
       Message::ResumeButton => shiftscreenfn(1),
       Message::BasicButton => index(0),
       Message::IntermediateButton => index(1),
+      Message::AdvancedButton => index(2),
       Message::ShiftButton => shiftvaluefn(),
       Message::SubmitButton => sumbitfn(),
       Message::SpaceButton => pushfn(String::from(" ")),
@@ -508,6 +541,8 @@ impl Application for MyButton {
         Message::ButtonPressed64 => pushfn(String::from(".")),
         Message::ButtonPressed65 => pushfn(String::from("?")),
         Message::ButtonPressed66 => pushfn(String::from("!")),
+        Message::LangButton0 => changelang(0),
+        Message::LangButton1 => changelang(1),
         Message::EventOccurred(event) => {
         if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
             pushfn(String::from(" "))
@@ -584,6 +619,8 @@ impl Application for MyButton {
           return makelevel(self);
       } else if SCREEN.lock_mut().unwrap()[0] == 2 {
           return makereview(self);
+      } else if SCREEN.lock_mut().unwrap()[0] == 3 {
+          return makelang(self);
       } else {
           return makemain(self); 
       } 
@@ -592,6 +629,7 @@ impl Application for MyButton {
 fn main() -> iced::Result {
     let rgba = vec![0, 0, 0, 255];
     TABLE.lock_mut().unwrap().push(0);
+    LANG.lock_mut().unwrap().push(0);
     loaddata();
     N.lock_mut().unwrap().push(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()));
     COLOUR.lock_mut().unwrap().push(0);
