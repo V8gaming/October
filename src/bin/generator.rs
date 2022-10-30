@@ -271,14 +271,42 @@ fn main() {
     file.write_all("fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {\n".as_bytes()).expect("write failed");
     file.write_all("    return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
+/*
+    let connection = sqlite::open("./resources/languages/English-Vietnamese.sqlite3").unwrap();
+    
+    let mut tables: Vec<String> = Vec::new();
 
+    let mut statement2 = connection
+        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+        .unwrap();
+
+    while let Ok(State::Row) = statement2.next() {
+        tables.push(statement2.read::<String>(0).unwrap())
+    }
+
+*/
 
     file.write_all("fn index(num: usize) {\n".as_bytes()).expect("write failed");
-    file.write_all("    SCREEN.lock_mut().unwrap()[0] = 1;\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut languages: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    for file in fs::read_dir(\"./resources/languages/\").unwrap() {\n".as_bytes()).expect("write failed");
+    file.write_all("        languages.push(file.unwrap().path().display().to_string())\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
 
-    file.write_all("    TABLE.lock_mut().unwrap()[0] = num;\n".as_bytes()).expect("write failed");
-    file.write_all("    loaddata();\n".as_bytes()).expect("write failed");
-    file.write_all("    nextfn();\n".as_bytes()).expect("write failed");
+    file.write_all("    let connection = sqlite::open(format!(\"{}\", languages[LANG.lock_mut().unwrap()[0]])).unwrap();\n".as_bytes()).expect("write failed");
+    
+    file.write_all("    let mut statement2 = connection\n".as_bytes()).expect("write failed");
+    file.write_all("    .prepare(\"SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'\" )\n    .unwrap();\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut tables: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    while let Ok(State::Row) = statement2.next() {\n".as_bytes()).expect("write failed");
+    file.write_all("        tables.push(statement2.read::<String>(0).unwrap())\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+    file.write_all("    if num < tables.len() {\n".as_bytes()).expect("write failed");
+    file.write_all("        SCREEN.lock_mut().unwrap()[0] = 1;\n".as_bytes()).expect("write failed");
+    file.write_all("        TABLE.lock_mut().unwrap()[0] = num;\n".as_bytes()).expect("write failed");
+    file.write_all("        loaddata();\n".as_bytes()).expect("write failed");
+    file.write_all("        nextfn();\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
 
     file.write_all("}\n".as_bytes()).expect("write failed");
     
@@ -305,7 +333,7 @@ fn main() {
     file.write_all("fn makelang(selfx: &mut MyButton) -> Element<Message>{\n".as_bytes()).expect("write failed");
     file.write_all("    let langcolumn = Column::new()".as_bytes()).expect("write failed");
     for i in 0..languages.len() {
-        file.write_all(format!(".push(add_button(&mut selfx.lang_state{}, String::from(\"{}\"), Message::LangButton{}))", i, languages[i].strip_prefix("./resources/languages/").unwrap(), i).as_bytes()).expect("write failed");
+        file.write_all(format!(".push(add_button(&mut selfx.lang_state{}, String::from(\"{}\"), Message::LangButton{}))", i, languages[i].strip_prefix("./resources/languages/").unwrap().strip_suffix(".sqlite3").unwrap(), i).as_bytes()).expect("write failed");
     }
     file.write_all("    ;\n".as_bytes()).expect("write failed");
 

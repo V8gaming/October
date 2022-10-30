@@ -23,3 +23,4 @@ cargo run --bin generator; cargo run --bin generated
 
 - [ ] No Vecs
 - [ ] Compile without generator
+- [ ] No unwraps

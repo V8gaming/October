@@ -239,10 +239,24 @@ fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, M
     return Button::new(a, Text::new(format!("{}",b))).on_press(c);
 }
 fn index(num: usize) {
-    SCREEN.lock_mut().unwrap()[0] = 1;
-    TABLE.lock_mut().unwrap()[0] = num;
-    loaddata();
-    nextfn();
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        languages.push(file.unwrap().path().display().to_string())
+    }
+    let connection = sqlite::open(format!("{}", languages[LANG.lock_mut().unwrap()[0]])).unwrap();
+    let mut statement2 = connection
+    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+    .unwrap();
+    let mut tables: Vec<String> = Vec::new();
+    while let Ok(State::Row) = statement2.next() {
+        tables.push(statement2.read::<String>(0).unwrap())
+    }
+    if num < tables.len() {
+        SCREEN.lock_mut().unwrap()[0] = 1;
+        TABLE.lock_mut().unwrap()[0] = num;
+        loaddata();
+        nextfn();
+    }
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
@@ -257,7 +271,7 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
     return main;
 }
 fn makelang(selfx: &mut MyButton) -> Element<Message>{
-    let langcolumn = Column::new().push(add_button(&mut selfx.lang_state0, String::from("English-Vietnamese.sqlite3"), Message::LangButton0)).push(add_button(&mut selfx.lang_state1, String::from("test.sqlite3"), Message::LangButton1))    ;
+    let langcolumn = Column::new().push(add_button(&mut selfx.lang_state0, String::from("English-Vietnamese"), Message::LangButton0)).push(add_button(&mut selfx.lang_state1, String::from("test"), Message::LangButton1))    ;
     let main: Element<Message> = Container::new(langcolumn)
         .padding(100)
         .width(Length::Fill)
