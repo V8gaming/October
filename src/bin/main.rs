@@ -25,7 +25,7 @@ struct MyButton {
     resume_state: button::State,
     basic_state: button::State,
     intermediate_state: button::State,
-    Advanced_state: button::State,
+    advanced_state: button::State,
     shift_state: button::State,
     submit_state: button::State,
     space_state: button::State,
@@ -246,7 +246,7 @@ fn index(num: usize) {
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
-    let maincolumn = Column::new().push(langs).push(add_button(&mut selfx.basic_state, String::from("Enter basic"), Message::BasicButton)).push(add_button(&mut selfx.intermediate_state, String::from("Enter intermediate"), Message::IntermediateButton)).push(add_button(&mut selfx.Advanced_state, String::from("Enter Advanced"), Message::AdvancedButton));
+    let maincolumn = Column::new().push(langs).push(add_button(&mut selfx.basic_state, String::from("Enter basic"), Message::BasicButton)).push(add_button(&mut selfx.intermediate_state, String::from("Enter intermediate"), Message::IntermediateButton)).push(add_button(&mut selfx.advanced_state, String::from("Enter advanced"), Message::AdvancedButton));
     let main: Element<Message> = Container::new(maincolumn)
         .padding(100)
         .width(Length::Fill)
