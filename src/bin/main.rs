@@ -23,9 +23,9 @@ struct MyButton {
     gotomain_state: button::State,
     gotolang_state: button::State,
     resume_state: button::State,
-    basic_state: button::State,
-    intermediate_state: button::State,
-    advanced_state: button::State,
+    table0_state: button::State,
+    table1_state: button::State,
+    table2_state: button::State,
     shift_state: button::State,
     submit_state: button::State,
     space_state: button::State,
@@ -108,9 +108,9 @@ struct MyButton {
     GotoMainButton,
     GotoLangButton,
     ResumeButton,
-    BasicButton,
-    IntermediateButton,
-    AdvancedButton,
+    TableButton0,
+    TableButton1,
+    TableButton2,
     ShiftButton,
     SubmitButton,
     SpaceButton,
@@ -238,6 +238,25 @@ fn clearfn() {
 fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
     return Button::new(a, Text::new(format!("{}",b))).on_press(c);
 }
+fn loadtables<'a>(self0: &'a mut button::State,self1: &'a mut button::State,self2: &'a mut button::State,) -> Vec<Button<'a, Message>> {
+    if LANG.lock_mut().unwrap()[0] == 0 {
+        return vec![
+            add_button(self0, String::from("Basic"), Message::TableButton0),
+            add_button(self1, String::from("Intermediate"), Message::TableButton1),
+            add_button(self2, String::from("Advanced"), Message::TableButton2),
+            ];
+    } else if LANG.lock_mut().unwrap()[0] == 1 {
+        return vec![
+            add_button(self0, String::from("Basic"), Message::TableButton0),
+            add_button(self1, String::from("Intermediate"), Message::TableButton1),
+            ];
+    } else  {
+        return vec![
+            add_button(self0, String::from("Level 0"), Message::TableButton0),
+            add_button(self1, String::from("Level 1"), Message::TableButton1),
+            ];
+    }
+}
 fn index(num: usize) {
     let mut languages: Vec<String> = Vec::new();
     for file in fs::read_dir("./resources/languages/").unwrap() {
@@ -260,7 +279,11 @@ fn index(num: usize) {
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
-    let maincolumn = Column::new().push(langs).push(add_button(&mut selfx.basic_state, String::from("Enter basic"), Message::BasicButton)).push(add_button(&mut selfx.intermediate_state, String::from("Enter intermediate"), Message::IntermediateButton)).push(add_button(&mut selfx.advanced_state, String::from("Enter advanced"), Message::AdvancedButton));
+    let buttons = loadtables(&mut selfx.table0_state,&mut selfx.table1_state,&mut selfx.table2_state,);
+    let mut maincolumn = Column::new().push(langs);
+    for i in buttons  {
+        maincolumn = maincolumn.push(i);
+    };
     let main: Element<Message> = Container::new(maincolumn)
         .padding(100)
         .width(Length::Fill)
@@ -479,9 +502,9 @@ impl Application for MyButton {
       Message::GotoMainButton => shiftscreenfn(0),
       Message::GotoLangButton => shiftscreenfn(3),
       Message::ResumeButton => shiftscreenfn(1),
-      Message::BasicButton => index(0),
-      Message::IntermediateButton => index(1),
-      Message::AdvancedButton => index(2),
+      Message::TableButton0 => index(0),
+      Message::TableButton1 => index(1),
+      Message::TableButton2 => index(2),
       Message::ShiftButton => shiftvaluefn(),
       Message::SubmitButton => sumbitfn(),
       Message::SpaceButton => pushfn(String::from(" ")),

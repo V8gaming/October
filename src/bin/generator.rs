@@ -11,6 +11,28 @@ fn some_kind_of_uppercase_first_letter(s: &str) -> String {
 }
 
 fn main() {
+    let mut languages2 = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        languages2.push(file.unwrap().path().display().to_string());
+
+    }
+    let mut lengths: Vec<usize> = Vec::new();
+    for lang in 0..languages2.len() {
+        let connection = sqlite::open(format!("{}", languages2[lang])).unwrap();
+        let mut statement2 = connection
+            .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+            .unwrap();
+        
+        let mut len: Vec<String> = Vec::new();
+        while let Ok(State::Row) = statement2.next() {
+            len.push(statement2.read::<String>(0).unwrap())
+            //println!("{}", statement2.read::<String>(0).unwrap());
+        }
+        //println!("{}",len.len());
+        lengths.push(len.len());
+    }
+    let max = lengths.iter().max().unwrap();
+    let min = lengths.iter().min().unwrap();
     let connection = sqlite::open("./resources/languages/English-Vietnamese.sqlite3").unwrap();
     
     let mut tables: Vec<String> = Vec::new();
@@ -20,7 +42,7 @@ fn main() {
         .unwrap();
 
     while let Ok(State::Row) = statement2.next() {
-        println!("{}", statement2.read::<String>(0).unwrap());
+        //println!("{}", statement2.read::<String>(0).unwrap());
         tables.push(statement2.read::<String>(0).unwrap())
     }
 
@@ -104,8 +126,8 @@ fn main() {
 
     file.write_all(format!("    resume_state: button::State,\n").as_bytes()).expect("write failed");
 
-    for i in &tables {
-        file.write_all(format!("    {}_state: button::State,\n",i).as_bytes()).expect("write failed");
+    for i in 0..*max {
+        file.write_all(format!("    table{}_state: button::State,\n",i).as_bytes()).expect("write failed");
     }
     for i in customstates {
         file.write_all(format!("    {}_state: button::State,\n",i).as_bytes()).expect("write failed");
@@ -129,8 +151,8 @@ fn main() {
     file.write_all("    GotoLangButton,\n".as_bytes()).expect("write failed");
     file.write_all("    ResumeButton,\n".as_bytes()).expect("write failed");
 
-    for i in 0..tables.len() {
-        file.write_all(format!("    {}Button,\n",some_kind_of_uppercase_first_letter(&tables[i])).as_bytes()).expect("write failed");
+    for i in 0..*max {
+        file.write_all(format!("    TableButton{},\n",i).as_bytes()).expect("write failed");
     }
     for i in &custombuttons {
         file.write_all(format!("    {}Button,\n",i).as_bytes()).expect("write failed");
@@ -286,6 +308,63 @@ fn main() {
 
 */
 
+let mut languages1 = Vec::new();
+for file in fs::read_dir("./resources/languages/").unwrap() {
+    languages1.push(file.unwrap().path().display().to_string());
+
+}
+
+file.write_all("fn loadtables<'a>(".as_bytes()).expect("write failed");
+for i in 0..*max {
+    file.write_all(format!("self{}: &'a mut button::State,", i).as_bytes()).expect("write failed");
+}
+file.write_all(format!(") -> Vec<Button<'a, Message>> {{\n", ).as_bytes()).expect("write failed");
+file.write_all(format!("    if LANG.lock_mut().unwrap()[0] == 0 {{\n").as_bytes()).expect("write failed");
+file.write_all(format!("        return vec![\n").as_bytes()).expect("write failed");
+
+let connection = sqlite::open(format!("{}", languages1[0])).unwrap();
+let mut statement2 = connection
+    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+    .unwrap();
+let mut x1 = 0;
+while let Ok(State::Row) = statement2.next() {
+    //println!("{}", statement2.read::<String>(0).unwrap());
+    file.write_all(format!("            add_button(self{}, String::from(\"{}\"), Message::TableButton{}),\n", x1, some_kind_of_uppercase_first_letter(&String::from(statement2.read::<String>(0).unwrap())), x1).as_bytes()).expect("write failed");
+    x1 +=1
+}
+file.write_all(format!("            ];\n").as_bytes()).expect("write failed");
+
+for lang in 1..languages1.len() {
+    //if LANG.lock_mut().unwrap()[0] == 0 {
+    file.write_all(format!("    }} else if LANG.lock_mut().unwrap()[0] == {} {{\n", lang).as_bytes()).expect("write failed");
+    file.write_all(format!("        return vec![\n").as_bytes()).expect("write failed");
+
+    let connection = sqlite::open(format!("{}", languages1[lang])).unwrap();
+    let mut statement2 = connection
+        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+        .unwrap();
+        let mut x1 = 0;
+    while let Ok(State::Row) = statement2.next() {
+        //println!("{}", statement2.read::<String>(0).unwrap());
+        file.write_all(format!("            add_button(self{}, String::from(\"{}\"), Message::TableButton{}),\n", x1, some_kind_of_uppercase_first_letter(&String::from(statement2.read::<String>(0).unwrap())), x1).as_bytes()).expect("write failed");
+        x1 +=1
+    }
+    file.write_all(format!("            ];\n").as_bytes()).expect("write failed");
+
+}
+file.write_all(format!("    }} else  {{\n").as_bytes()).expect("write failed");
+file.write_all(format!("        return vec![\n").as_bytes()).expect("write failed");
+
+for x1 in 0..*min {
+    //println!("{}", statement2.read::<String>(0).unwrap());
+    file.write_all(format!("            add_button(self{}, String::from(\"Level {}\"), Message::TableButton{}),\n", x1, x1, x1).as_bytes()).expect("write failed");
+}
+file.write_all(format!("            ];\n").as_bytes()).expect("write failed");
+
+
+file.write_all("    }\n".as_bytes()).expect("write failed");
+file.write_all("}\n".as_bytes()).expect("write failed");
+
     file.write_all("fn index(num: usize) {\n".as_bytes()).expect("write failed");
     file.write_all("    let mut languages: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
     file.write_all("    for file in fs::read_dir(\"./resources/languages/\").unwrap() {\n".as_bytes()).expect("write failed");
@@ -312,12 +391,17 @@ fn main() {
     
     file.write_all("fn makemain(selfx: &mut MyButton) -> Element<Message>{\n".as_bytes()).expect("write failed");
     file.write_all("    let langs = add_button(&mut selfx.gotolang_state, String::from(\"Languages\"), Message::GotoLangButton);\n".as_bytes()).expect("write failed");
-
-    file.write_all("    let maincolumn = Column::new().push(langs)".as_bytes()).expect("write failed");
-    for i in 0..tables.len() {
-        file.write_all(format!(".push(add_button(&mut selfx.{}_state, String::from(\"Enter {}\"), Message::{}Button))", tables[i], tables[i], some_kind_of_uppercase_first_letter(&tables[i])).as_bytes()).expect("write failed");
+    file.write_all(format!("    let buttons = loadtables(").as_bytes()).expect("write failed");
+    for i in 0..*max {
+        file.write_all(format!("&mut selfx.table{}_state,", i).as_bytes()).expect("write failed");
     }
-    file.write_all(";\n".as_bytes()).expect("write failed");
+    file.write_all(format!(");\n").as_bytes()).expect("write failed");
+
+    file.write_all("    let mut maincolumn = Column::new().push(langs);\n".as_bytes()).expect("write failed");
+    file.write_all("    for i in buttons  {\n".as_bytes()).expect("write failed");
+    file.write_all("        maincolumn = maincolumn.push(i);\n".as_bytes()).expect("write failed");
+    file.write_all("    };\n".as_bytes()).expect("write failed");
+
 
     file.write_all("    let main: Element<Message> = Container::new(maincolumn)\n".as_bytes()).expect("write failed");
     file.write_all("        .padding(100)\n".as_bytes()).expect("write failed");
@@ -517,8 +601,8 @@ fn main() {
     file.write_all(format!("      Message::GotoLangButton => shiftscreenfn(3),\n").as_bytes()).expect("write failed");
     file.write_all(format!("      Message::ResumeButton => shiftscreenfn(1),\n").as_bytes()).expect("write failed");
 
-    for i in 0..tables.len() {
-        file.write_all(format!("      Message::{}Button => index({}),\n", some_kind_of_uppercase_first_letter(&tables[i]), i).as_bytes()).expect("write failed");
+    for i in 0..*max {
+        file.write_all(format!("      Message::TableButton{} => index({}),\n", i, i).as_bytes()).expect("write failed");
     }
     for i in 0..customstates.len() {
         file.write_all(format!("      Message::{}Button => {},\n", custombuttons[i], customfunctions[i]).as_bytes()).expect("write failed");

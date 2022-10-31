@@ -21,7 +21,6 @@ static LANG: Global<Vec<usize>> = Global::new();
 
 #[derive(Default, Clone, Debug)]
 struct MyButton {
-    reload_state: button::State,
     gotomain_state: button::State,
     gototesting_state: button::State,
     gotolang_state: button::State,
@@ -36,13 +35,15 @@ struct MyButton {
     button_state3: button::State,
     lang_state0: button::State,
     lang_state1: button::State,
+    basic_state: button::State,
+    intermediate_state: button::State,
+    advanced_state: button::State,
 
 }
 
 #[derive(Debug, Clone)]
 enum Message {
     EventOccurred(iced_native::Event),
-    ReloadButton,
     GotoMainButton,
     GotoTestingButton,
     GotoLangButton,
@@ -57,6 +58,9 @@ enum Message {
     ButtonPressed3,
     LangButton0,
     LangButton1,
+    BasicButton,
+    IntermediateButton,
+    AdvancedButton,
 }
 
 fn pushfn(letter: String) {
@@ -121,16 +125,44 @@ fn nextfn() {
 fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
     return Button::new(a, Text::new(format!("{}",b))).on_press(c);
 }
-fn index() {
-    if TABLE.lock_mut().unwrap()[0] == 1{
-        TABLE.lock_mut().unwrap()[0] = 0
-    } else if TABLE.lock_mut().unwrap()[0] == 0 {
-        TABLE.lock_mut().unwrap()[0] = 1
-    } else {
-        TABLE.lock_mut().unwrap()[0] = 0
+fn index(num: usize) {
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        languages.push(file.unwrap().path().display().to_string())
     }
-    loaddata();
-    nextfn();
+    let connection = sqlite::open(format!("{}", languages[LANG.lock_mut().unwrap()[0]])).unwrap();
+    let mut statement2 = connection
+    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+    .unwrap();
+    let mut tables: Vec<String> = Vec::new();
+    while let Ok(State::Row) = statement2.next() {
+        tables.push(statement2.read::<String>(0).unwrap())
+    }
+    if num < tables.len() {
+        SCREEN.lock_mut().unwrap()[0] = 1;
+        TABLE.lock_mut().unwrap()[0] = num;
+        loaddata();
+        nextfn();
+    }
+}
+fn loadtables<'a>(self1: &'a mut button::State, self2: &'a mut button::State, self3: &'a mut button::State) -> Vec<Button<'a, Message>> {
+    if LANG.lock_mut().unwrap()[0] == 0 {
+        return vec![
+            add_button(self1, String::from("Enter basic"), Message::BasicButton), 
+            add_button(self2, String::from("Enter intermediate"), Message::IntermediateButton),
+            add_button(self3, String::from("Enter advanced"), Message::AdvancedButton)
+            ];
+    } else if LANG.lock_mut().unwrap()[0] == 1 {
+        return vec![
+            add_button(self1, String::from("Enter basic"), Message::BasicButton), 
+            add_button(self2, String::from("Enter intermediate"), Message::IntermediateButton),            
+            ];
+    } else {
+        return vec![
+            add_button(self1, String::from("Enter basic"), Message::BasicButton), 
+            add_button(self2, String::from("Enter intermediate"), Message::IntermediateButton),            
+            ];
+    }
 }
 fn loaddata() {
     let mut languages: Vec<String> = Vec::new();
@@ -195,9 +227,15 @@ fn makelang(selfx: &mut MyButton) -> Element<Message>{
     return main;
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
-    let enter = add_button(&mut selfx.gototesting_state, String::from("Enter Testing"), Message::GotoTestingButton);
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
-    let maincolumn = Column::new().push(enter).push(langs);
+    let buttons = loadtables(&mut selfx.basic_state, &mut selfx.intermediate_state, &mut selfx.advanced_state);
+
+    let mut maincolumn = Column::new().push(langs);
+
+    for i in buttons  {
+        maincolumn = maincolumn.push(i);
+    }
+
     let main: Element<Message> = Container::new(maincolumn)
         .padding(100)
         .width(Length::Fill)
@@ -243,8 +281,6 @@ fn makelevel(selfx: &mut MyButton) -> Element<Message>{
         add_button(&mut selfx.button_state3, shiftfn(String::from("d")), Message::ButtonPressed3),
     ];
 
-    let reload = add_button(&mut selfx.reload_state, String::from("Reload"), Message::ReloadButton);
-
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit Testing"), Message::GotoMainButton);
     let shift = add_button(&mut selfx.shift_state, String::from("Shift"), Message::ShiftButton);
     let submit = add_button(&mut selfx.submit_state, String::from("submit"), Message::SubmitButton);
@@ -253,7 +289,7 @@ fn makelevel(selfx: &mut MyButton) -> Element<Message>{
     let next = add_button(&mut selfx.next_state, String::from("next"), Message::NextButton);
 
     let mut userrow = Row::new();
-    userrow = userrow.push(submit).push(space).push(delete).push(next).push(shift).push(reload);
+    userrow = userrow.push(submit).push(space).push(delete).push(next).push(shift);
 
 
     let mut row1 = Row::new();
@@ -290,10 +326,12 @@ impl Application for MyButton {
     
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::ReloadButton => index(),
             Message::GotoMainButton => shiftscreenfn(0),
             Message::GotoLangButton => shiftscreenfn(3),
             Message::GotoTestingButton => shiftscreenfn(1),
+            Message::BasicButton => index(0),
+            Message::IntermediateButton => index(1),
+            Message::AdvancedButton => index(2),
             Message::SubmitButton => sumbitfn(),
             Message::SpaceButton => pushfn(String::from(" ")),
             Message::DeleteButton => popfn(),
