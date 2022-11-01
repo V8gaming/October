@@ -16,16 +16,17 @@ cargo run --bin generator; cargo run --bin generated
 - [ ] Sound
 - [x] Main page
 - [x] Remake database as (table name = level. data = [english, vietnamese, type])
-- [x] Language Page 
-    - [x] change loaded tables based on database loaded
-    - [x] write enums and tables based on min and max size of amount of tables in databas (idea use numbers in code and index the list using that number)
+- [x] Language Page
+  - [x] change loaded tables based on database loaded
+  - [x] write enums and tables based on min and max size of amount of tables in databas (idea use numbers in code and index the list using that number)
 - [ ] Options Page
-    - [ ] Text size
-    - [ ] Sound or no sound
+  - [ ] Text size
+  - [ ] Sound or no sound
 - [ ] languages as folder(database, settings.TOML)
 - [ ] Title in main page
 - [ ] red theme
 - [x] Review Page
+- [ ] Compile for mac and linux
 
 ## Future
 
