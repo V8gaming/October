@@ -24,7 +24,7 @@ cargo run --bin generator; cargo run --bin generated
     - [ ] Sound or no sound
 - [ ] languages as folder(database, settings.TOML)
 - [ ] Title in main page
-- [ ] red there
+- [ ] red theme
 - [x] Review Page
 
 ## Future
