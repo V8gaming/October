@@ -22,11 +22,15 @@ cargo run --bin generator; cargo run --bin generated
 - [ ] Options Page
   - [ ] Text size
   - [ ] Sound or no sound
-- [ ] languages as folder(database, settings.TOML)
-- [ ] Title in main page
+  - [ ] Check for both meanings seperated by a semicolon, or check for either
+  - [ ] Volume
+  - [ ] Timed
+- [ ] languages as folder(database, settings.toml)
+- [x] Title in main page, and selected language.
 - [ ] red theme
 - [x] Review Page
 - [ ] Compile for mac and linux
+- [ ] Check for both meanings seperated by a semicolon, or check for either (requires settings)
 
 ## Future
 
