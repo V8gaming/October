@@ -278,9 +278,15 @@ fn index(num: usize) {
     }
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        languages.push(file.unwrap().path().display().to_string())
+    }
+    let title = Text::new("October").size(120).height(Length::FillPortion(1)).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let curlang = Text::new(format!("Language: {}", languages[LANG.lock_mut().unwrap()[0]].strip_suffix(".sqlite3").unwrap().strip_prefix("./resources/languages/").unwrap())).height(Length::FillPortion(1)).size(60);
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
     let buttons = loadtables(&mut selfx.table0_state,&mut selfx.table1_state,&mut selfx.table2_state,);
-    let mut maincolumn = Column::new().push(langs);
+    let mut maincolumn = Column::new().push(title).push(curlang).push(langs).align_items(alignment::Alignment::Center).width(Length::Fill);
     for i in buttons  {
         maincolumn = maincolumn.push(i);
     };
@@ -294,6 +300,7 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
     return main;
 }
 fn makelang(selfx: &mut MyButton) -> Element<Message>{
+    TABLE.lock_mut().unwrap()[0] = 0;
     let langcolumn = Column::new().push(add_button(&mut selfx.lang_state0, String::from("English-Vietnamese"), Message::LangButton0)).push(add_button(&mut selfx.lang_state1, String::from("test"), Message::LangButton1))    ;
     let main: Element<Message> = Container::new(langcolumn)
         .padding(100)
@@ -674,7 +681,7 @@ fn main() -> iced::Result {
     X.lock_mut().unwrap().push(0);
     let setting: iced::Settings<()> = Settings {
         window: window::Settings {
-            size: (900, 600),resizable: true,decorations: true,min_size: Some((900 as u32,600 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),        },default_font: Some(include_bytes!("../../resources/Arial Unicode MS Font.ttf")),antialiasing: true,id: Some("October".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,
+            size: (900, 600),resizable: true,decorations: true,min_size: Some((900 as u32,600 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: false,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),        },default_font: Some(include_bytes!("../../resources/Arial Unicode MS Font.ttf")),antialiasing: true,id: Some("October".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,
     };
     MyButton::run(setting)
 }

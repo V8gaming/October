@@ -366,6 +366,7 @@ file.write_all("    }\n".as_bytes()).expect("write failed");
 file.write_all("}\n".as_bytes()).expect("write failed");
 
     file.write_all("fn index(num: usize) {\n".as_bytes()).expect("write failed");
+    
     file.write_all("    let mut languages: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
     file.write_all("    for file in fs::read_dir(\"./resources/languages/\").unwrap() {\n".as_bytes()).expect("write failed");
     file.write_all("        languages.push(file.unwrap().path().display().to_string())\n".as_bytes()).expect("write failed");
@@ -390,6 +391,20 @@ file.write_all("}\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
     
     file.write_all("fn makemain(selfx: &mut MyButton) -> Element<Message>{\n".as_bytes()).expect("write failed");
+    /*
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        languages.push(file.unwrap().path().display().to_string())
+    }
+    */
+    file.write_all("    let mut languages: Vec<String> = Vec::new();\n".as_bytes()).expect("write failed");
+    file.write_all("    for file in fs::read_dir(\"./resources/languages/\").unwrap() {\n".as_bytes()).expect("write failed");
+    file.write_all("        languages.push(file.unwrap().path().display().to_string())\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
+    file.write_all("    let title = Text::new(\"October\").size(120).height(Length::FillPortion(1)).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);\n".as_bytes()).expect("write failed");
+
+    file.write_all("    let curlang = Text::new(format!(\"Language: {}\", languages[LANG.lock_mut().unwrap()[0]].strip_suffix(\".sqlite3\").unwrap().strip_prefix(\"./resources/languages/\").unwrap())).height(Length::FillPortion(1)).size(60);\n".as_bytes()).expect("write failed");
     file.write_all("    let langs = add_button(&mut selfx.gotolang_state, String::from(\"Languages\"), Message::GotoLangButton);\n".as_bytes()).expect("write failed");
     file.write_all(format!("    let buttons = loadtables(").as_bytes()).expect("write failed");
     for i in 0..*max {
@@ -397,7 +412,7 @@ file.write_all("}\n".as_bytes()).expect("write failed");
     }
     file.write_all(format!(");\n").as_bytes()).expect("write failed");
 
-    file.write_all("    let mut maincolumn = Column::new().push(langs);\n".as_bytes()).expect("write failed");
+    file.write_all("    let mut maincolumn = Column::new().push(title).push(curlang).push(langs).align_items(alignment::Alignment::Center).width(Length::Fill);\n".as_bytes()).expect("write failed");
     file.write_all("    for i in buttons  {\n".as_bytes()).expect("write failed");
     file.write_all("        maincolumn = maincolumn.push(i);\n".as_bytes()).expect("write failed");
     file.write_all("    };\n".as_bytes()).expect("write failed");
@@ -415,6 +430,7 @@ file.write_all("}\n".as_bytes()).expect("write failed");
 
 
     file.write_all("fn makelang(selfx: &mut MyButton) -> Element<Message>{\n".as_bytes()).expect("write failed");
+    file.write_all("    TABLE.lock_mut().unwrap()[0] = 0;\n".as_bytes()).expect("write failed");
     file.write_all("    let langcolumn = Column::new()".as_bytes()).expect("write failed");
     for i in 0..languages.len() {
         file.write_all(format!(".push(add_button(&mut selfx.lang_state{}, String::from(\"{}\"), Message::LangButton{}))", i, languages[i].strip_prefix("./resources/languages/").unwrap().strip_suffix(".sqlite3").unwrap(), i).as_bytes()).expect("write failed");
@@ -682,7 +698,7 @@ file.write_all("}\n".as_bytes()).expect("write failed");
     file.write_all("    let setting: iced::Settings<()> = Settings {\n".as_bytes()).expect("write failed");
     file.write_all("        window: window::Settings {\n".as_bytes()).expect("write failed");
 
-    file.write_all("            size: (900, 600),resizable: true,decorations: true,min_size: Some((900 as u32,600 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: true,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),".as_bytes()).expect("write failed");
+    file.write_all("            size: (900, 600),resizable: true,decorations: true,min_size: Some((900 as u32,600 as u32)),max_size: Some((2000 as u32,2000 as u32)),transparent: false,always_on_top: false,icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),position: Specific(0, 0),".as_bytes()).expect("write failed");
     file.write_all("        },default_font: Some(include_bytes!(\"../../resources/Arial Unicode MS Font.ttf\")),antialiasing: true,id: Some(\"October\".to_string()),flags: (),default_text_size: 20,text_multithreading: true,exit_on_close_request: true,try_opengles_first: false,\n".as_bytes()).expect("write failed");
 
     file.write_all("    };\n".as_bytes()).expect("write failed");

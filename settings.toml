@@ -1,0 +1,15 @@
+[settings]
+seperate_check_synonyms = false
+
+[settings.sound]
+sound = true
+volume = 100
+
+[settings.time]
+timed = true
+length = 10
+
+[settings.textsize]
+h1 = 120
+h2 = 80
+h3 = 40
