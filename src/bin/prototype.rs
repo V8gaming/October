@@ -1,12 +1,14 @@
 use std::fs;
 
-use iced::{button, Button, Element, Command, Settings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment};
+use iced::{button, Button, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
 use rand::{thread_rng, Rng};
 use iced_native::{Event, keyboard};
 use sqlite::State;
+use serde_derive::Deserialize;
+use toml;
 
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<String>> = Global::new();
@@ -17,6 +19,45 @@ static X: Global<Vec<usize>> = Global::new();
 static SCREEN: Global<Vec<usize>> = Global::new();
 static TABLE: Global<Vec<usize>> = Global::new();
 static LANG: Global<Vec<usize>> = Global::new();
+static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();
+static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();
+
+
+#[derive(Deserialize, Debug)]
+struct Data {
+    settings: Settings
+}
+
+#[derive(Deserialize, Debug)]
+struct TextsizeData {
+    h1: usize,
+    h2: usize,
+    h3: usize,
+    h4: usize,
+    body: usize,
+}
+
+
+#[derive(Deserialize, Debug)]
+struct SoundData {
+    sound: bool,
+    volume: usize,
+
+}
+
+#[derive(Deserialize, Debug)]
+struct TimeData {
+    timed: bool,
+    length: usize,
+}
+
+#[derive(Deserialize, Debug)]
+struct Settings {
+    seperate_check_synonyms: bool,
+    sound: SoundData,
+    textsize: TextsizeData,
+    time: TimeData,
+}
 
 
 #[derive(Default, Clone, Debug)]
@@ -123,7 +164,7 @@ fn nextfn() {
 }
 
 fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
-    return Button::new(a, Text::new(format!("{}",b))).on_press(c);
+    return Button::new(a, Text::new(format!("{}",b)).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16)).on_press(c);
 }
 fn index(num: usize) {
     let mut languages: Vec<String> = Vec::new();
@@ -227,10 +268,11 @@ fn makelang(selfx: &mut MyButton) -> Element<Message>{
     return main;
 }
 fn makemain(selfx: &mut MyButton) -> Element<Message>{
+    let title = Text::new("October").size(SETTINGS_USIZE.lock_mut().unwrap()[2] as u16);
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
     let buttons = loadtables(&mut selfx.basic_state, &mut selfx.intermediate_state, &mut selfx.advanced_state);
 
-    let mut maincolumn = Column::new().push(langs);
+    let mut maincolumn = Column::new().push(title).push(langs);
 
     for i in buttons  {
         maincolumn = maincolumn.push(i);
@@ -249,13 +291,13 @@ fn makereview(selfx: &mut MyButton) -> Element<Message>{
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
 
-    let subtitle1 = Text::new("Your response").color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let subtitle2 = Text::new("Vietnamese").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let subtitle3 = Text::new("English").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle1 = Text::new("Your response").color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
+    let subtitle2 = Text::new("Vietnamese").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
+    let subtitle3 = Text::new("English").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
     
-    let response = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
-    let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
+    let response = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(60)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
+    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60)).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
+    let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60)).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
 
     let resume = add_button(&mut selfx.gototesting_state, String::from("Resume"), Message::GotoTestingButton);
     let column = Column::new().push(exit).push(subtitle1).push(response).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
@@ -377,9 +419,39 @@ impl Application for MyButton {
     }
     
 }
+fn loadsettings() {
+    let filename = "./settings.toml";
+    let contents = fs::read_to_string(filename).unwrap();
 
+    let data: Data = toml::from_str(&contents).unwrap();
+    let boollist = 
+    [
+        data.settings.seperate_check_synonyms,
+        data.settings.sound.sound,
+        data.settings.time.timed
+    ];
+    for i in boollist {
+        SETTINGS_BOOL.lock_mut().unwrap().push(i);
+    }
+    let usizelist = 
+    [
+        data.settings.sound.volume,
+        data.settings.time.length,
+        data.settings.textsize.h1,
+        data.settings.textsize.h2,
+        data.settings.textsize.h3,
+        data.settings.textsize.h4,
+        data.settings.textsize.body,
+
+    ];
+    for i in usizelist {
+        SETTINGS_USIZE.lock_mut().unwrap().push(i);
+    }
+
+}
 
 fn main() -> iced::Result {
+    loadsettings();
     let rgba = vec![0, 0, 0, 255];
     TABLE.lock_mut().unwrap().push(0);
     LANG.lock_mut().unwrap().push(0);
@@ -390,7 +462,7 @@ fn main() -> iced::Result {
     SCREEN.lock_mut().unwrap().push(0);
     
 
-    let setting: iced::Settings<()> = Settings {
+    let setting: IcedSettings<()> = IcedSettings {
         window: window::Settings {
             size: (800, 600),
             resizable: true,

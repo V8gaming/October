@@ -1,15 +1,17 @@
 [settings]
-seperate_check_synonyms = false
+seperate_check_synonyms = false # 0
 
 [settings.sound]
-sound = true
-volume = 100
+sound = true # 1
+volume = 100 # 0
 
 [settings.time]
-timed = true
-length = 10
+timed = true # 2
+length = 10 # 1
 
 [settings.textsize]
-h1 = 120
-h2 = 80
-h3 = 40
+h1 = 140 # 2
+h2 = 80 # 3
+h3 = 50 # 4
+h4 = 40 # 5
+body = 20 # 6
