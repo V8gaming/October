@@ -2,12 +2,14 @@ use serde_derive::Deserialize;
 use std::fs;
 use toml;
 
+
 #[derive(Deserialize, Debug)]
 struct Data {
     settings: Settings
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 struct TextsizeData {
     h1: i32,
     h2: i32,
@@ -15,6 +17,7 @@ struct TextsizeData {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 struct SoundData {
     sound: bool,
     volume: i32,
@@ -22,6 +25,7 @@ struct SoundData {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 struct TimeData {
     timed: bool,
     length: i32,

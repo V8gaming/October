@@ -94,7 +94,8 @@ fn main() {
     file.write_all(format!("use sqlite::State;\n").as_bytes()).expect("write failed");
     file.write_all(format!("use iced_native::{{Event, keyboard}};\n").as_bytes()).expect("write failed");
     file.write_all(format!("use std::fs;\n").as_bytes()).expect("write failed");
-
+    file.write_all(format!("use serde_derive::Deserialize;\n").as_bytes()).expect("write failed");
+    file.write_all(format!("use toml;\n").as_bytes()).expect("write failed");
     
     
 
@@ -116,6 +117,47 @@ fn main() {
     file.write_all(format!("static TEXTTYPE: Global<Vec<String>> = Global::new();\n").as_bytes()).expect("write failed");
     file.write_all(format!("static SCREEN: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
     file.write_all(format!("static LANG: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();\n").as_bytes()).expect("write failed");
+    file.write_all(format!("static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();\n").as_bytes()).expect("write failed");
+
+    /*
+    #[derive(Deserialize, Debug)]
+    struct Data {
+        settings: Settings
+    }
+    */
+    file.write_all("#[derive(Deserialize, Debug)]\n".as_bytes()).expect("write failed");
+    file.write_all("struct Data {\n".as_bytes()).expect("write failed");
+    file.write_all("    settings: ImportSettings\n".as_bytes()).expect("write failed");
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
+    file.write_all("#[derive(Deserialize, Debug)]\n".as_bytes()).expect("write failed");
+    file.write_all("struct TextsizeData {\n".as_bytes()).expect("write failed");
+    for i in ["h1: usize", "h2: usize", "h3: usize", "h4: usize", "body: usize",] {
+        file.write_all(format!("    {},\n", i).as_bytes()).expect("write failed");
+    }
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
+    file.write_all("#[derive(Deserialize, Debug)]\n".as_bytes()).expect("write failed");
+    file.write_all("struct SoundData {\n".as_bytes()).expect("write failed");
+    for i in ["sound: bool,", "volume: usize,"] {
+        file.write_all(format!("    {}\n", i).as_bytes()).expect("write failed");
+    }
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
+    file.write_all("#[derive(Deserialize, Debug)]\n".as_bytes()).expect("write failed");
+    file.write_all("struct TimeData {\n".as_bytes()).expect("write failed");
+    for i in ["timed: bool,", "length: usize,"] {
+        file.write_all(format!("    {}\n", i).as_bytes()).expect("write failed");
+    }
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
+    file.write_all("#[derive(Deserialize, Debug)]\n".as_bytes()).expect("write failed");
+    file.write_all("struct ImportSettings {\n".as_bytes()).expect("write failed");
+    for i in ["seperate_check_synonyms: bool,", "sound: SoundData,", "textsize: TextsizeData,", "time: TimeData,"] {
+        file.write_all(format!("    {}\n", i).as_bytes()).expect("write failed");
+    }
+    file.write_all("}\n".as_bytes()).expect("write failed");
 
 
     file.write_all("\n".as_bytes()).expect("write failed");
@@ -291,7 +333,7 @@ fn main() {
     }
     */
     file.write_all("fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {\n".as_bytes()).expect("write failed");
-    file.write_all("    return Button::new(a, Text::new(format!(\"{}\",b))).on_press(c);\n".as_bytes()).expect("write failed");
+    file.write_all("    return Button::new(a, Text::new(format!(\"{}\",b)).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16)).on_press(c);\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 /*
     let connection = sqlite::open("./resources/languages/English-Vietnamese.sqlite3").unwrap();
@@ -613,15 +655,15 @@ file.write_all("}\n".as_bytes()).expect("write failed");
 
     // fn update
     file.write_all("\n  fn update(&mut self, message: Message) -> Command<Message> {\n        match message {\n".as_bytes()).expect("write failed");
-    file.write_all(format!("      Message::GotoMainButton => shiftscreenfn(0),\n").as_bytes()).expect("write failed");
-    file.write_all(format!("      Message::GotoLangButton => shiftscreenfn(3),\n").as_bytes()).expect("write failed");
-    file.write_all(format!("      Message::ResumeButton => shiftscreenfn(1),\n").as_bytes()).expect("write failed");
+    file.write_all(format!("        Message::GotoMainButton => shiftscreenfn(0),\n").as_bytes()).expect("write failed");
+    file.write_all(format!("        Message::GotoLangButton => shiftscreenfn(3),\n").as_bytes()).expect("write failed");
+    file.write_all(format!("        Message::ResumeButton => shiftscreenfn(1),\n").as_bytes()).expect("write failed");
 
     for i in 0..*max {
-        file.write_all(format!("      Message::TableButton{} => index({}),\n", i, i).as_bytes()).expect("write failed");
+        file.write_all(format!("        Message::TableButton{} => index({}),\n", i, i).as_bytes()).expect("write failed");
     }
     for i in 0..customstates.len() {
-        file.write_all(format!("      Message::{}Button => {},\n", custombuttons[i], customfunctions[i]).as_bytes()).expect("write failed");
+        file.write_all(format!("        Message::{}Button => {},\n", custombuttons[i], customfunctions[i]).as_bytes()).expect("write failed");
     }
 
     for i in 0..listlengths {
@@ -652,7 +694,7 @@ file.write_all("}\n".as_bytes()).expect("write failed");
 
     for i in latinletters {
         file.write_all(format!("        }} else if let Event::Keyboard(keyboard::Event::KeyReleased {{ key_code: keyboard::KeyCode::{}, modifiers: _ }}) = event {{\n", i.to_uppercase()).as_bytes()).expect("write failed");
-        file.write_all(format!("                        pushfn(String::from(\"{}\"))\n", i).as_bytes()).expect("write failed");
+        file.write_all(format!("            pushfn(String::from(\"{}\"))\n", i).as_bytes()).expect("write failed");
     }
 
     file.write_all("      }\n".as_bytes()).expect("write failed");
@@ -682,7 +724,39 @@ file.write_all("}\n".as_bytes()).expect("write failed");
     file.write_all("\n    }\n".as_bytes()).expect("write failed");
     file.write_all("}\n".as_bytes()).expect("write failed");
 
+
+    file.write_all("fn loadsettings() {\n".as_bytes()).expect("write failed");
+    file.write_all("    SETTINGS_BOOL.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
+    file.write_all("    SETTINGS_USIZE.lock_mut().unwrap().clear();\n".as_bytes()).expect("write failed");
+    file.write_all("    let filename = \"./settings.toml\";\n".as_bytes()).expect("write failed");
+    file.write_all("    let contents = fs::read_to_string(filename).unwrap();\n".as_bytes()).expect("write failed");
+
+    file.write_all("    let data: Data = toml::from_str(&contents).unwrap();\n".as_bytes()).expect("write failed");
+    file.write_all("    let boollist = \n".as_bytes()).expect("write failed");
+    file.write_all("    [ \n".as_bytes()).expect("write failed");
+    for i in ["seperate_check_synonyms","sound.sound", "time.timed"] {
+        file.write_all(format!("        data.settings.{},\n", i).as_bytes()).expect("write failed");
+    }
+    file.write_all("    ]; \n".as_bytes()).expect("write failed");
+    file.write_all("    for i in boollist {\n".as_bytes()).expect("write failed");
+    file.write_all("        SETTINGS_BOOL.lock_mut().unwrap().push(i);\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
+    file.write_all("    let usizelist = \n".as_bytes()).expect("write failed");
+    file.write_all("    [ \n".as_bytes()).expect("write failed");
+    for i in ["sound.volume","time.length", "textsize.h1", "textsize.h2", "textsize.h3", "textsize.h4", "textsize.body"] {
+        file.write_all(format!("        data.settings.{},\n", i).as_bytes()).expect("write failed");
+    }
+    file.write_all("    ]; \n".as_bytes()).expect("write failed");
+    file.write_all("    for i in usizelist {\n".as_bytes()).expect("write failed");
+    file.write_all("        SETTINGS_USIZE.lock_mut().unwrap().push(i);\n".as_bytes()).expect("write failed");
+    file.write_all("    }\n".as_bytes()).expect("write failed");
+
+    file.write_all("}\n".as_bytes()).expect("write failed");
+
     file.write_all("fn main() -> iced::Result {\n".as_bytes()).expect("write failed");
+    file.write_all("    loadsettings();\n".as_bytes()).expect("write failed");
+
     file.write_all("    let rgba = vec![0, 0, 0, 255];\n".as_bytes()).expect("write failed");
     file.write_all("    TABLE.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
     file.write_all("    LANG.lock_mut().unwrap().push(0);\n".as_bytes()).expect("write failed");
