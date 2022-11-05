@@ -2,16 +2,17 @@
 seperate_check_synonyms = false # 0
 
 [settings.sound]
-sound = true # 1
+sound =  true # 1
 volume = 100 # 0
 
 [settings.time]
-timed = true # 2
+timed =  true # 2
 length = 10 # 1
 
 [settings.textsize]
-h1 = 140 # 2
+h1 = 120 # 2
 h2 = 80 # 3
 h3 = 50 # 4
 h4 = 40 # 5
 body = 20 # 6
+

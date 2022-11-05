@@ -269,7 +269,7 @@ fn clearfn() {
     }
 }
 fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
-    return Button::new(a, Text::new(format!("{}",b)).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16)).on_press(c);
+    return Button::new(a, body(format!("{}",b))).on_press(c);
 }
 fn loadtables<'a>(self0: &'a mut button::State,self1: &'a mut button::State,self2: &'a mut button::State,) -> Vec<Button<'a, Message>> {
     if LANG.lock_mut().unwrap()[0] == 0 {
@@ -315,8 +315,8 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
     for file in fs::read_dir("./resources/languages/").unwrap() {
         languages.push(file.unwrap().path().display().to_string())
     }
-    let title = Text::new("October").size(120).height(Length::FillPortion(1)).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let curlang = Text::new(format!("Language: {}", languages[LANG.lock_mut().unwrap()[0]].strip_suffix(".sqlite3").unwrap().strip_prefix("./resources/languages/").unwrap())).height(Length::FillPortion(1)).size(60);
+    let title = h1(String::from("October")).height(Length::FillPortion(1)).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let curlang = h3(format!("Language: {}", languages[LANG.lock_mut().unwrap()[0]].strip_suffix(".sqlite3").unwrap().strip_prefix("./resources/languages/").unwrap())).height(Length::FillPortion(1));
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
     let buttons = loadtables(&mut selfx.table0_state,&mut selfx.table1_state,&mut selfx.table2_state,);
     let mut maincolumn = Column::new().push(title).push(curlang).push(langs).align_items(alignment::Alignment::Center).width(Length::Fill);
@@ -347,12 +347,12 @@ fn makelang(selfx: &mut MyButton) -> Element<Message>{
 fn makereview(selfx: &mut MyButton) -> Element<Message>{
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    let subtitle1 = Text::new("Your answer").color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let subtitle2 = Text::new("Vietnamese").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let subtitle3 = Text::new("English").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let youranswer = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
-    let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(40);
+    let subtitle1 = h3(String::from("Your answer")).color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle2 = h3(String::from("Vietnamese")).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle3 = h3(String::from("English")).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let youranswer = h4(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80));
+    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80));
     let resume = add_button(&mut selfx.resume_state, String::from("Resume"), Message::ResumeButton);
     let column = Column::new().push(exit).push(subtitle1).push(youranswer).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
     let main: Element<Message> = Container::new(column)
@@ -364,10 +364,10 @@ fn makereview(selfx: &mut MyButton) -> Element<Message>{
     return main;
 }
  fn makelevel(selfx: &mut MyButton) -> Element<Message>{
-    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80)).size(50);
+    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(80));
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).size(50).color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let texttype = Text::new(format!("{}",TEXTTYPE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Fill).size(40);
+    let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(80)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let texttype = h4(format!("{}",TEXTTYPE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Fill).size(40);
     let buttons1 = [
         add_button(&mut selfx.button_state0, shiftfn(String::from("a")), Message::ButtonPressed0),
         add_button(&mut selfx.button_state1, shiftfn(String::from("b")), Message::ButtonPressed1),
@@ -731,6 +731,21 @@ fn loadsettings() {
     for i in usizelist {
         SETTINGS_USIZE.lock_mut().unwrap().push(i);
     }
+}
+fn h1(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[2] as u16);
+}
+fn h2(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[3] as u16);
+}
+fn h3(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
+}
+fn h4(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
+}
+fn body(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16);
 }
 fn main() -> iced::Result {
     loadsettings();

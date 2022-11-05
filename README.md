@@ -20,13 +20,15 @@ cargo run --bin generator; cargo run --bin generated
   - [x] change loaded tables based on database loaded
   - [x] write enums and tables based on min and max size of amount of tables in databas (idea use numbers in code and index the list using that number)
 - [ ] Options Page
-  - [ ] Text size
+  - [x] Text size
   - [ ] Sound or no sound
   - [ ] Check for both meanings seperated by a semicolon, or check for either
-  - [ ] Volume
+  - [x] Volume
   - [ ] Timed
+  - [x] length of timer
 - [ ] languages as folder(database, settings.toml)
 - [x] Title in main page, and selected language.
+- [ ] Add comments to code.
 - [ ] red theme
 - [x] Review Page
 - [ ] Compile for mac and linux

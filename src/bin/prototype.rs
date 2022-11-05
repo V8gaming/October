@@ -1,6 +1,6 @@
 use std::fs;
-
-use iced::{button, Button, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment};
+use std::io::Write;
+use iced::{button, Button, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment};
 use iced::window::Position::Specific;
 use iced::window::Icon;
 use global::Global;
@@ -61,15 +61,17 @@ struct Settings {
 
 
 #[derive(Default, Clone, Debug)]
-struct MyButton {
+struct Buttons {
     gotomain_state: button::State,
     gototesting_state: button::State,
     gotolang_state: button::State,
+    gotosetting_state: button::State,
     shift_state: button::State,
     next_state: button::State,
     submit_state: button::State,
     space_state: button::State,
     delete_state: button::State,
+    save_state: button::State,
     button_state0: button::State, 
     button_state1: button::State,
     button_state2: button::State,
@@ -79,7 +81,21 @@ struct MyButton {
     basic_state: button::State,
     intermediate_state: button::State,
     advanced_state: button::State,
+    settings: SettingButtons,
 
+}
+#[derive(Clone, Debug, Default)]
+struct SettingButtons {
+    seperate_check_synonyms: slider::State,
+    sound: button::State,
+    volume: slider::State,
+    timed: button::State,
+    length: slider::State,
+    h1: slider::State,
+    h2: slider::State,
+    h3: slider::State,
+    h4: slider::State,
+    body: slider::State,
 }
 
 #[derive(Debug, Clone)]
@@ -88,11 +104,13 @@ enum Message {
     GotoMainButton,
     GotoTestingButton,
     GotoLangButton,
+    GotoSettingButton,
     ShiftButton,
     NextButton,
     SubmitButton,
     SpaceButton,
     DeleteButton,
+    SaveButton,
     ButtonPressed0,
     ButtonPressed1,
     ButtonPressed2,
@@ -102,7 +120,18 @@ enum Message {
     BasicButton,
     IntermediateButton,
     AdvancedButton,
+    SeperateCheckBox(bool),
+    SoundBox(bool),
+    VolumeSlider(i32),
+    TimedBox(bool),
+    LengthSlider(i32),
+    H1Slider(i32),
+    H2Slider(i32),
+    H3Slider(i32),
+    H4Slider(i32),
+    BodySlider(i32),
 }
+
 
 fn pushfn(letter: String) {
     LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
@@ -164,8 +193,9 @@ fn nextfn() {
 }
 
 fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
-    return Button::new(a, Text::new(format!("{}",b)).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16)).on_press(c);
+    return Button::new(a, body(b)).on_press(c);
 }
+
 fn index(num: usize) {
     let mut languages: Vec<String> = Vec::new();
     for file in fs::read_dir("./resources/languages/").unwrap() {
@@ -254,7 +284,7 @@ fn changelang(num: usize) {
     shiftscreenfn(0);
     loaddata();
 }
-fn makelang(selfx: &mut MyButton) -> Element<Message>{
+fn makelang(selfx: &mut Buttons) -> Element<Message>{
     let lang0 = add_button(&mut selfx.lang_state0, String::from("Lang0"), Message::LangButton0);
     let lang1 = add_button(&mut selfx.lang_state1, String::from("Lang1"), Message::LangButton1);
     let langcolumn = Column::new().push(lang0).push(lang1);
@@ -267,12 +297,90 @@ fn makelang(selfx: &mut MyButton) -> Element<Message>{
         .into();
     return main;
 }
-fn makemain(selfx: &mut MyButton) -> Element<Message>{
-    let title = Text::new("October").size(SETTINGS_USIZE.lock_mut().unwrap()[2] as u16);
+
+fn savefn() {
+    let mut file = std::fs::File::create("./settings.toml").expect("create failed");
+    file.write_all(format!("[settings]\n").as_bytes()).expect("write failed");
+    file.write_all(format!("seperate_check_synonyms = {} # 0\n", SETTINGS_BOOL.lock_mut().unwrap()[0]).as_bytes()).expect("write failed");
+    file.write_all(format!("\n").as_bytes()).expect("write failed");
+
+    file.write_all(format!("[settings.sound]\n").as_bytes()).expect("write failed");
+    file.write_all(format!("sound =  {} # 1\n", SETTINGS_BOOL.lock_mut().unwrap()[1]).as_bytes()).expect("write failed");
+    file.write_all(format!("volume = {} # 0\n", SETTINGS_USIZE.lock_mut().unwrap()[0]).as_bytes()).expect("write failed");
+    file.write_all(format!("\n").as_bytes()).expect("write failed");
+
+    file.write_all(format!("[settings.time]\n").as_bytes()).expect("write failed");
+    file.write_all(format!("timed =  {} # 2\n", SETTINGS_BOOL.lock_mut().unwrap()[2]).as_bytes()).expect("write failed");
+    file.write_all(format!("length = {} # 1\n", SETTINGS_USIZE.lock_mut().unwrap()[1]).as_bytes()).expect("write failed");
+    file.write_all(format!("\n").as_bytes()).expect("write failed");
+
+    file.write_all(format!("[settings.textsize]\n").as_bytes()).expect("write failed");
+    file.write_all(format!("h1 = {} # 2\n", SETTINGS_USIZE.lock_mut().unwrap()[2]).as_bytes()).expect("write failed");
+    file.write_all(format!("h2 = {} # 3\n", SETTINGS_USIZE.lock_mut().unwrap()[3]).as_bytes()).expect("write failed");
+    file.write_all(format!("h3 = {} # 4\n", SETTINGS_USIZE.lock_mut().unwrap()[4]).as_bytes()).expect("write failed");
+    file.write_all(format!("h4 = {} # 5\n", SETTINGS_USIZE.lock_mut().unwrap()[5]).as_bytes()).expect("write failed");
+    file.write_all(format!("body = {} # 6\n", SETTINGS_USIZE.lock_mut().unwrap()[6]).as_bytes()).expect("write failed");
+    file.write_all(format!("\n").as_bytes()).expect("write failed");
+
+}
+#[macro_export]
+macro_rules! makeslider {
+    ($a:expr,$b:expr,$c:expr,$d:expr)=>{
+        {
+            Slider::new($a,0..=$b,$c as i32,$d)
+        }
+    }
+}
+
+fn makesettings(selfx: &mut Buttons) -> Element<Message>{
+
+    let volumeslider = makeslider!(&mut selfx.settings.volume, 100, SETTINGS_USIZE.lock_mut().unwrap()[0], Message::VolumeSlider);
+    let lengthslider =makeslider!(&mut selfx.settings.length, 30, SETTINGS_USIZE.lock_mut().unwrap()[1], Message::LengthSlider);
+    let h1slider =makeslider!(&mut selfx.settings.h1, 200, SETTINGS_USIZE.lock_mut().unwrap()[2], Message::H1Slider);
+    let h2slider =makeslider!(&mut selfx.settings.h2, 200, SETTINGS_USIZE.lock_mut().unwrap()[3], Message::H2Slider);
+    let h3slider =makeslider!(&mut selfx.settings.h3, 200, SETTINGS_USIZE.lock_mut().unwrap()[4], Message::H3Slider);
+    let h4slider =makeslider!(&mut selfx.settings.h4, 200, SETTINGS_USIZE.lock_mut().unwrap()[5], Message::H4Slider);
+    let bodyslider =makeslider!(&mut selfx.settings.body, 200, SETTINGS_USIZE.lock_mut().unwrap()[6], Message::BodySlider);
+    let volume = h4(String::from(format!("Volume: {}", SETTINGS_USIZE.lock_mut().unwrap()[0])));
+    let length = h4(String::from(format!("Time: {}", SETTINGS_USIZE.lock_mut().unwrap()[1])));
+    let h1 = h1(String::from(format!("H1: {}", SETTINGS_USIZE.lock_mut().unwrap()[2])));
+    let h2 = h2(String::from(format!("H2: {}", SETTINGS_USIZE.lock_mut().unwrap()[3])));
+    let h3 = h3(String::from(format!("H3: {}", SETTINGS_USIZE.lock_mut().unwrap()[4])));
+    let h4 = h4(String::from(format!("H4: {}", SETTINGS_USIZE.lock_mut().unwrap()[5])));
+    let body = body(String::from(format!("Body: {}", SETTINGS_USIZE.lock_mut().unwrap()[6])));
+
+
+    let save = add_button(&mut selfx.save_state, String::from("Save"), Message::SaveButton); 
+    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
+    let row = Row::new().push(save).push(exit);
+
+    let settingcolumn = Column::new()
+    .push(volume).push(volumeslider)
+    .push(length).push(lengthslider)
+    .push(h1).push(h1slider)
+    .push(h2).push(h2slider)
+    .push(h3).push(h3slider)
+    .push(h4).push(h4slider)
+    .push(body).push(bodyslider)
+    .push(row);
+
+    let main: Element<Message> = Container::new(settingcolumn)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
+        .center_y()
+        .into();
+    return main;
+}
+
+fn makemain(selfx: &mut Buttons) -> Element<Message>{
+    let title = h1(String::from("October"));
+    let settings = add_button(&mut selfx.gotosetting_state, String::from("Settings"), Message::GotoSettingButton);
     let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
     let buttons = loadtables(&mut selfx.basic_state, &mut selfx.intermediate_state, &mut selfx.advanced_state);
 
-    let mut maincolumn = Column::new().push(title).push(langs);
+    let mut maincolumn = Column::new().push(settings).push(title).push(langs);
 
     for i in buttons  {
         maincolumn = maincolumn.push(i);
@@ -287,34 +395,34 @@ fn makemain(selfx: &mut MyButton) -> Element<Message>{
         .into();
     return main;
 }
-fn makereview(selfx: &mut MyButton) -> Element<Message>{
+fn makereview(selfx: &mut Buttons) -> Element<Message>{
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
 
-    let subtitle1 = Text::new("Your response").color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
-    let subtitle2 = Text::new("Vietnamese").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
-    let subtitle3 = Text::new("English").horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
+    let subtitle1 = h3(String::from("Your Response")).color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle2 = h3(String::from("Vietnamese")).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
+    let subtitle3 = h3(String::from("English")).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
     
-    let response = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(60)).size(40).color(colours[COLOUR.lock_mut().unwrap()[0]]).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
-    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60)).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
-    let vietnamese = Text::new(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60)).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
+    let response = h4(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(60)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60));
+    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60));
 
     let resume = add_button(&mut selfx.gototesting_state, String::from("Resume"), Message::GotoTestingButton);
     let column = Column::new().push(exit).push(subtitle1).push(response).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
-    let main: Element<Message> = Container::new(column)
+    let review: Element<Message> = Container::new(column)
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
         .center_x()
         .into();
-    return main;
+    return review;
 }
 
-fn makelevel(selfx: &mut MyButton) -> Element<Message>{
-    let english = Text::new(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150)).size(80);
+fn makelevel(selfx: &mut Buttons) -> Element<Message>{
+    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150));
 
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    let text1 = Text::new(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).size(80).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
 
     let buttons = [
         add_button(&mut selfx.button_state0, shiftfn(String::from("a")), Message::ButtonPressed0),
@@ -349,7 +457,7 @@ fn makelevel(selfx: &mut MyButton) -> Element<Message>{
         .into();
     return testing;
 }
-impl Application for MyButton {
+impl Application for Buttons {
     type Message = Message;
     type Executor = executor::Default;
     type Flags = ();
@@ -358,12 +466,12 @@ impl Application for MyButton {
         iced_native::subscription::events().map(Message::EventOccurred)
     }
 
-    fn new(_flags: ()) -> (MyButton, Command<Message>) {
-        (MyButton::default(), Command::none())
+    fn new(_flags: ()) -> (Buttons, Command<Message>) {
+        (Buttons::default(), Command::none())
     }
 
     fn title(&self) -> String {
-        String::from("Button")
+        String::from("October")
     }
     
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -371,6 +479,7 @@ impl Application for MyButton {
             Message::GotoMainButton => shiftscreenfn(0),
             Message::GotoLangButton => shiftscreenfn(3),
             Message::GotoTestingButton => shiftscreenfn(1),
+            Message::GotoSettingButton => shiftscreenfn(4),
             Message::BasicButton => index(0),
             Message::IntermediateButton => index(1),
             Message::AdvancedButton => index(2),
@@ -385,6 +494,7 @@ impl Application for MyButton {
             Message::ButtonPressed1 => pushfn(String::from("b")),
             Message::ButtonPressed2 => pushfn(String::from("c")),
             Message::ButtonPressed3 => pushfn(String::from("d")),
+            Message::SaveButton => savefn(),
             Message::EventOccurred(event) => {
                 if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
                     pushfn(String::from(" "))
@@ -396,6 +506,35 @@ impl Application for MyButton {
                     sumbitfn()
                 } 
             },
+            Message::SeperateCheckBox(state) => {
+                if state == true {
+                    SETTINGS_BOOL.lock_mut().unwrap()[0] = true
+                } else if state == false {
+                    SETTINGS_BOOL.lock_mut().unwrap()[0] = false
+                }
+            },
+            Message::SoundBox(state) => {
+                if state == true {
+                    SETTINGS_BOOL.lock_mut().unwrap()[1] = true
+                } else if state == false {
+                    SETTINGS_BOOL.lock_mut().unwrap()[1] = false
+                }
+            },
+            Message::TimedBox(state) => {
+                if state == true {
+                    SETTINGS_BOOL.lock_mut().unwrap()[2] = true
+                } else if state == false {
+                    SETTINGS_BOOL.lock_mut().unwrap()[2] = false
+                }
+            },
+            Message::VolumeSlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[0] = num as usize,
+            Message::LengthSlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[1] = num as usize,
+            Message::H1Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[2] = num as usize,
+            Message::H2Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[3] = num as usize,
+            Message::H3Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[4] = num as usize,
+            Message::H4Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[5] = num as usize,
+            Message::BodySlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[6] = num as usize,
+ 
         };
 
         Command::none()
@@ -412,6 +551,8 @@ impl Application for MyButton {
             return makereview(self);
         } else if SCREEN.lock_mut().unwrap()[0] == 3 {
             return makelang(self);
+        } else if SCREEN.lock_mut().unwrap()[0] == 4 {
+            return makesettings(self);
         } else {
             return makemain(self);
         }
@@ -449,6 +590,21 @@ fn loadsettings() {
     }
 
 }
+fn h1(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[2] as u16);
+}
+fn h2(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[3] as u16);
+}
+fn h3(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
+}
+fn h4(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
+}
+fn body(text: String) -> Text {
+    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16);
+}
 
 fn main() -> iced::Result {
     loadsettings();
@@ -470,7 +626,7 @@ fn main() -> iced::Result {
             min_size: Some((100 as u32,100 as u32)),
             max_size: Some((2000 as u32,2000 as u32)),
             transparent: false,
-            always_on_top: true,
+            always_on_top: false,
             icon: Some(Icon::from_rgba(rgba, 1, 1).unwrap()),
             position: Specific(0, 0),
         },
@@ -483,7 +639,7 @@ fn main() -> iced::Result {
         exit_on_close_request: true,
         try_opengles_first: false,
     };
-    MyButton::run(setting)
+    Buttons::run(setting)
 
 }
 
