@@ -1,11 +1,12 @@
 use std::fs;
 use std::io::Write;
-use iced::{button, Button, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment};
+use iced::{button, Button, Checkbox, Scrollable, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment, scrollable, Size};
 use iced::window::Position::Specific;
 use iced::window::Icon;
+use iced_native::layout::Node;
 use global::Global;
 use rand::{thread_rng, Rng};
-use iced_native::{Event, keyboard};
+use iced_native::{Event, keyboard, Layout, Renderer, renderer, Rectangle, layout};
 use sqlite::State;
 use serde_derive::Deserialize;
 use toml;
@@ -86,16 +87,15 @@ struct Buttons {
 }
 #[derive(Clone, Debug, Default)]
 struct SettingButtons {
-    seperate_check_synonyms: slider::State,
-    sound: button::State,
     volume: slider::State,
-    timed: button::State,
     length: slider::State,
     h1: slider::State,
     h2: slider::State,
     h3: slider::State,
     h4: slider::State,
     body: slider::State,
+    scrollable_state: scrollable::State,
+    load_state: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -130,6 +130,7 @@ enum Message {
     H3Slider(i32),
     H4Slider(i32),
     BodySlider(i32),
+    LoadButton,
 }
 
 
@@ -303,7 +304,6 @@ fn savefn() {
     file.write_all(format!("[settings]\n").as_bytes()).expect("write failed");
     file.write_all(format!("seperate_check_synonyms = {} # 0\n", SETTINGS_BOOL.lock_mut().unwrap()[0]).as_bytes()).expect("write failed");
     file.write_all(format!("\n").as_bytes()).expect("write failed");
-
     file.write_all(format!("[settings.sound]\n").as_bytes()).expect("write failed");
     file.write_all(format!("sound =  {} # 1\n", SETTINGS_BOOL.lock_mut().unwrap()[1]).as_bytes()).expect("write failed");
     file.write_all(format!("volume = {} # 0\n", SETTINGS_USIZE.lock_mut().unwrap()[0]).as_bytes()).expect("write failed");
@@ -329,18 +329,55 @@ macro_rules! makeslider {
         {
             Slider::new($a,0..=$b,$c as i32,$d)
         }
+    };
+    ($a:expr,$b:expr,$c:expr,$d:expr, $e:expr)=>{
+        {
+            Slider::new($a,$b..=$c,$d as i32,$e)
+        }
+    }
+}
+struct PageBreak {
+}
+impl PageBreak {
+    pub fn add_pagebreak(&self, renderer: &mut impl crate::Renderer,) {   
+        let size = Size { width: 1.0, height: 1.0 };
+        let node = layout::Node::new(size);
+        let layout = Layout::new(&node);
+        let bounds = layout.bounds();
+        let rail_y = bounds.y + (bounds.height / 2.0).round();
+        renderer.fill_quad(
+            renderer::Quad {
+                bounds: Rectangle {
+                    x: bounds.x,
+                    y: rail_y - 1.0,
+                    width: bounds.width,
+                    height: 2.0,
+                },
+                border_radius: 0.0,
+                border_width: 0.0,
+                border_color: Color::BLACK,
+            },
+            Color::BLACK,
+        );
     }
 }
 
-fn makesettings(selfx: &mut Buttons) -> Element<Message>{
 
+fn makesettings(selfx: &mut Buttons) -> Element<Message>{
+    let h2_general= h2(String::from("General Settings"));
+    let seperatecheckbox = Checkbox::new(SETTINGS_BOOL.lock_mut().unwrap()[0], "Seperately check synonyms", Message::SeperateCheckBox);
+    let h2_sound = h2(String::from("Sound Settings"));
+    let soundbox = Checkbox::new(SETTINGS_BOOL.lock_mut().unwrap()[1], "Sound Enabled", Message::SoundBox);
     let volumeslider = makeslider!(&mut selfx.settings.volume, 100, SETTINGS_USIZE.lock_mut().unwrap()[0], Message::VolumeSlider);
-    let lengthslider =makeslider!(&mut selfx.settings.length, 30, SETTINGS_USIZE.lock_mut().unwrap()[1], Message::LengthSlider);
-    let h1slider =makeslider!(&mut selfx.settings.h1, 200, SETTINGS_USIZE.lock_mut().unwrap()[2], Message::H1Slider);
-    let h2slider =makeslider!(&mut selfx.settings.h2, 200, SETTINGS_USIZE.lock_mut().unwrap()[3], Message::H2Slider);
-    let h3slider =makeslider!(&mut selfx.settings.h3, 200, SETTINGS_USIZE.lock_mut().unwrap()[4], Message::H3Slider);
-    let h4slider =makeslider!(&mut selfx.settings.h4, 200, SETTINGS_USIZE.lock_mut().unwrap()[5], Message::H4Slider);
-    let bodyslider =makeslider!(&mut selfx.settings.body, 200, SETTINGS_USIZE.lock_mut().unwrap()[6], Message::BodySlider);
+    let h2_time = h2(String::from("Time Settings"));
+    let lengthbox = Checkbox::new(SETTINGS_BOOL.lock_mut().unwrap()[2], "Timed", Message::TimedBox);
+    let lengthslider = makeslider!(&mut selfx.settings.length, 1, 30, SETTINGS_USIZE.lock_mut().unwrap()[1], Message::LengthSlider);
+    let h2_text= h2(String::from("Text Settings"));
+    let h1slider = makeslider!(&mut selfx.settings.h1, 200, SETTINGS_USIZE.lock_mut().unwrap()[2], Message::H1Slider);
+    let h2slider = makeslider!(&mut selfx.settings.h2, 200, SETTINGS_USIZE.lock_mut().unwrap()[3], Message::H2Slider);
+    let h3slider = makeslider!(&mut selfx.settings.h3, 200, SETTINGS_USIZE.lock_mut().unwrap()[4], Message::H3Slider);
+    let h4slider = makeslider!(&mut selfx.settings.h4, 200, SETTINGS_USIZE.lock_mut().unwrap()[5], Message::H4Slider);
+    let bodyslider = makeslider!(&mut selfx.settings.body, 200, SETTINGS_USIZE.lock_mut().unwrap()[6], Message::BodySlider);
     let volume = h4(String::from(format!("Volume: {}", SETTINGS_USIZE.lock_mut().unwrap()[0])));
     let length = h4(String::from(format!("Time: {}", SETTINGS_USIZE.lock_mut().unwrap()[1])));
     let h1 = h1(String::from(format!("H1: {}", SETTINGS_USIZE.lock_mut().unwrap()[2])));
@@ -348,15 +385,21 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
     let h3 = h3(String::from(format!("H3: {}", SETTINGS_USIZE.lock_mut().unwrap()[4])));
     let h4 = h4(String::from(format!("H4: {}", SETTINGS_USIZE.lock_mut().unwrap()[5])));
     let body = body(String::from(format!("Body: {}", SETTINGS_USIZE.lock_mut().unwrap()[6])));
-
-
+    let reset = add_button(&mut selfx.settings.load_state, String::from("Reload Default"), Message::LoadButton);
     let save = add_button(&mut selfx.save_state, String::from("Save"), Message::SaveButton); 
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
-    let row = Row::new().push(save).push(exit);
+    let row = Row::new().push(save).push(exit).push(reset);
 
     let settingcolumn = Column::new()
+    .push(h2_general)
+    .push(seperatecheckbox)
+    .push(h2_sound)
+    .push(soundbox)
     .push(volume).push(volumeslider)
+    .push(h2_time)
+    .push(lengthbox)
     .push(length).push(lengthslider)
+    .push(h2_text)
     .push(h1).push(h1slider)
     .push(h2).push(h2slider)
     .push(h3).push(h3slider)
@@ -364,8 +407,10 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
     .push(body).push(bodyslider)
     .push(row);
 
-    let main: Element<Message> = Container::new(settingcolumn)
-        .padding(100)
+    let padding = Container::new(settingcolumn).padding(50).width(Length::Fill);
+    let scroll = Scrollable::new(&mut selfx.settings.scrollable_state).push(padding);
+    let main: Element<Message> = Container::new(scroll)
+        .padding(50)
         .width(Length::Fill)
         .height(Length::Fill)
         .center_x()
@@ -476,6 +521,7 @@ impl Application for Buttons {
     
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
+            Message::LoadButton => loadsettings(),
             Message::GotoMainButton => shiftscreenfn(0),
             Message::GotoLangButton => shiftscreenfn(3),
             Message::GotoTestingButton => shiftscreenfn(1),
@@ -506,27 +552,9 @@ impl Application for Buttons {
                     sumbitfn()
                 } 
             },
-            Message::SeperateCheckBox(state) => {
-                if state == true {
-                    SETTINGS_BOOL.lock_mut().unwrap()[0] = true
-                } else if state == false {
-                    SETTINGS_BOOL.lock_mut().unwrap()[0] = false
-                }
-            },
-            Message::SoundBox(state) => {
-                if state == true {
-                    SETTINGS_BOOL.lock_mut().unwrap()[1] = true
-                } else if state == false {
-                    SETTINGS_BOOL.lock_mut().unwrap()[1] = false
-                }
-            },
-            Message::TimedBox(state) => {
-                if state == true {
-                    SETTINGS_BOOL.lock_mut().unwrap()[2] = true
-                } else if state == false {
-                    SETTINGS_BOOL.lock_mut().unwrap()[2] = false
-                }
-            },
+            Message::SeperateCheckBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[0] = state,
+            Message::SoundBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[1] = state,
+            Message::TimedBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[2] = state,
             Message::VolumeSlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[0] = num as usize,
             Message::LengthSlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[1] = num as usize,
             Message::H1Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[2] = num as usize,
@@ -564,6 +592,8 @@ fn loadsettings() {
     let filename = "./settings.toml";
     let contents = fs::read_to_string(filename).unwrap();
 
+    SETTINGS_BOOL.lock_mut().unwrap().clear();
+    SETTINGS_USIZE.lock_mut().unwrap().clear();
     let data: Data = toml::from_str(&contents).unwrap();
     let boollist = 
     [
