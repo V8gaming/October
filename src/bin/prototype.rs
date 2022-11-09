@@ -1,12 +1,12 @@
 use std::fs;
 use std::io::Write;
-use iced::{button, Button, Checkbox, Scrollable, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment, scrollable, Size};
+use std::time::{Duration, Instant};
+use iced::{button, Button, Checkbox, Scrollable, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment, scrollable};
 use iced::window::Position::Specific;
 use iced::window::Icon;
-use iced_native::layout::Node;
 use global::Global;
 use rand::{thread_rng, Rng};
-use iced_native::{Event, keyboard, Layout, Renderer, renderer, Rectangle, layout};
+use iced_native::{Event, keyboard};
 use sqlite::State;
 use serde_derive::Deserialize;
 use toml;
@@ -336,32 +336,6 @@ macro_rules! makeslider {
         }
     }
 }
-struct PageBreak {
-}
-impl PageBreak {
-    pub fn add_pagebreak(&self, renderer: &mut impl crate::Renderer,) {   
-        let size = Size { width: 1.0, height: 1.0 };
-        let node = layout::Node::new(size);
-        let layout = Layout::new(&node);
-        let bounds = layout.bounds();
-        let rail_y = bounds.y + (bounds.height / 2.0).round();
-        renderer.fill_quad(
-            renderer::Quad {
-                bounds: Rectangle {
-                    x: bounds.x,
-                    y: rail_y - 1.0,
-                    width: bounds.width,
-                    height: 2.0,
-                },
-                border_radius: 0.0,
-                border_width: 0.0,
-                border_color: Color::BLACK,
-            },
-            Color::BLACK,
-        );
-    }
-}
-
 
 fn makesettings(selfx: &mut Buttons) -> Element<Message>{
     let h2_general= h2(String::from("General Settings"));
@@ -465,7 +439,7 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
 
 fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150));
-
+    
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
     let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
 
