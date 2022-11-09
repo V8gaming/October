@@ -18,3 +18,10 @@ toml = "0.5.9"
 serde = "1.0.147"
 serde_derive = "1.0.147"
 sqlite = "0.27.3"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "my_benchmark"
+harness = false

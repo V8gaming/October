@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, time};
 use std::io::Write;
 use std::time::{Duration, Instant};
 use iced::{button, Button, Checkbox, Scrollable, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment, scrollable};
@@ -20,6 +20,7 @@ static X: Global<Vec<usize>> = Global::new();
 static SCREEN: Global<Vec<usize>> = Global::new();
 static TABLE: Global<Vec<usize>> = Global::new();
 static LANG: Global<Vec<usize>> = Global::new();
+static TIME: Global<Vec<Instant>> = Global::new();
 static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();
 static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();
 
@@ -157,6 +158,8 @@ fn shiftvaluefn() {
 }
 
 fn shiftscreenfn(destination: usize) {
+
+
     SCREEN.lock_mut().unwrap()[0] = destination;
     N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
     LETTERS.lock_mut().unwrap().clear();
@@ -187,6 +190,8 @@ fn popfn() {
 }
 
 fn nextfn() {
+    TIME.lock_mut().unwrap().clear();
+    TIME.lock_mut().unwrap().push(Instant::now());
     //println!("{}", ENGLISH.lock_mut().unwrap().len());
     N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
     LETTERS.lock_mut().unwrap().clear();
@@ -281,6 +286,7 @@ fn loaddata() {
     }
 }
 fn changelang(num: usize) {
+
     LANG.lock_mut().unwrap()[0] = num;
     shiftscreenfn(0);
     loaddata();
@@ -365,21 +371,21 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
     let row = Row::new().push(save).push(exit).push(reset);
 
     let settingcolumn = Column::new()
-    .push(h2_general)
-    .push(seperatecheckbox)
-    .push(h2_sound)
-    .push(soundbox)
-    .push(volume).push(volumeslider)
-    .push(h2_time)
-    .push(lengthbox)
-    .push(length).push(lengthslider)
-    .push(h2_text)
-    .push(h1).push(h1slider)
-    .push(h2).push(h2slider)
-    .push(h3).push(h3slider)
-    .push(h4).push(h4slider)
-    .push(body).push(bodyslider)
-    .push(row);
+        .push(h2_general)
+        .push(seperatecheckbox)
+        .push(h2_sound)
+        .push(soundbox)
+        .push(volume).push(volumeslider)
+        .push(h2_time)
+        .push(lengthbox)
+        .push(length).push(lengthslider)
+        .push(h2_text)
+        .push(h1).push(h1slider)
+        .push(h2).push(h2slider)
+        .push(h3).push(h3slider)
+        .push(h4).push(h4slider)
+        .push(body).push(bodyslider)
+        .push(row);
 
     let padding = Container::new(settingcolumn).padding(50).width(Length::Fill);
     let scroll = Scrollable::new(&mut selfx.settings.scrollable_state).push(padding);
@@ -415,6 +421,7 @@ fn makemain(selfx: &mut Buttons) -> Element<Message>{
     return main;
 }
 fn makereview(selfx: &mut Buttons) -> Element<Message>{
+
     let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
 
@@ -438,6 +445,10 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
 }
 
 fn makelevel(selfx: &mut Buttons) -> Element<Message>{
+    let timer = h4(format!("{:.2}",  (SETTINGS_USIZE.lock_mut().unwrap()[1] as f64 - TIME.lock_mut().unwrap()[0].elapsed().as_secs_f64())));
+    if TIME.lock_mut().unwrap()[0].elapsed().as_secs() >= SETTINGS_USIZE.lock_mut().unwrap()[1] as u64 {
+        sumbitfn()
+    }
     let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150));
     
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
@@ -465,7 +476,7 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     for button in buttons {
         row1 = row1.push(button);
     };
-    let utilrow = Row::new().push(exit);
+    let utilrow = Row::new().push(timer).push(exit);
     let column1 = Column::new().push(utilrow.width(Length::Fill)).push(english).push(text1).push(userrow).push(row1).width(Length::Fill).align_items(iced::Alignment::Center);
     let testing: Element<Message> = Container::new(column1)
         .padding(100)
@@ -544,7 +555,6 @@ impl Application for Buttons {
     }
 
     fn view(&mut self) -> Element<Message> {
-
         if SCREEN.lock_mut().unwrap()[0] == 0 {
             return makemain(self);
         } else if SCREEN.lock_mut().unwrap()[0] == 1 {
@@ -562,7 +572,7 @@ impl Application for Buttons {
     }
     
 }
-fn loadsettings() {
+pub fn loadsettings() {
     let filename = "./settings.toml";
     let contents = fs::read_to_string(filename).unwrap();
 
@@ -620,7 +630,7 @@ fn main() -> iced::Result {
     COLOUR.lock_mut().unwrap().push(0);
     X.lock_mut().unwrap().push(0);
     SCREEN.lock_mut().unwrap().push(0);
-    
+    TIME.lock_mut().unwrap().push(Instant::now());
 
     let setting: IcedSettings<()> = IcedSettings {
         window: window::Settings {
