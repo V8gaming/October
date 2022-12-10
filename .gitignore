@@ -10,3 +10,4 @@ Cargo.lock
 **/*.rs.bk
 /backup/
 src/bin/pagebreak.rs
+prompt copy.md

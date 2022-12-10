@@ -1,30 +1,52 @@
-use std::{fs, time};
-use std::io::Write;
-use std::time::{Duration, Instant};
-use iced::{button, Button, Checkbox, Scrollable, Slider, slider, Element, Command, Settings as IcedSettings, Text, Container, Length, Column, Row, window, Color, Application, Subscription, executor, alignment, scrollable};
-use iced::window::Position::Specific;
-use iced::window::Icon;
+#![feature(map_many_mut)]
+use std::{
+    fs, io::Write, 
+    time::Instant,
+    collections::HashMap,
+};
+use iced::{
+    button, Button, 
+    Checkbox, Scrollable, 
+    Slider, slider, 
+    Element, Command, 
+    Settings as IcedSettings, 
+    Text, Container, 
+    Length, Column, 
+    Row, window, 
+    Color, Application,
+    Subscription, executor, 
+    alignment, scrollable,
+    window::Position::Specific, window::Icon
+};
+use std::sync::atomic::{AtomicU32, Ordering};
 use global::Global;
 use rand::{thread_rng, Rng};
 use iced_native::{Event, keyboard};
-use sqlite::State;
+use sqlite::State as SqlState;
 use serde_derive::Deserialize;
 use toml;
+
+
+// Global variables for storing the letters to be typed, the English and Vietnamese words,
+// and other program state such as the current screen, language, and time.
 
 static LETTERS: Global<Vec<String>> = Global::new();
 static ENGLISH: Global<Vec<String>> = Global::new();
 static VIETNAMESE: Global<Vec<String>> = Global::new();
-static N: Global<Vec<usize>> = Global::new();
-static COLOUR: Global<Vec<usize>> = Global::new();
-static X: Global<Vec<usize>> = Global::new();
-static SCREEN: Global<Vec<usize>> = Global::new();
-static TABLE: Global<Vec<usize>> = Global::new();
-static LANG: Global<Vec<usize>> = Global::new();
-static TIME: Global<Vec<Instant>> = Global::new();
 static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();
 static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();
+static TIME: Global<Vec<Instant>> = Global::new();
+
+static N: AtomicU32 = AtomicU32::new(0);
+static COLOUR:AtomicU32 = AtomicU32::new(0);
+static X: AtomicU32 = AtomicU32::new(0);
+static SCREEN: AtomicU32 = AtomicU32::new(0);
+static TABLE: AtomicU32 = AtomicU32::new(0);
+static LANG: AtomicU32 = AtomicU32::new(0);
 
 
+
+// Struct for holding the program's settings, including text size and time limit settings.
 #[derive(Deserialize, Debug)]
 struct Data {
     settings: Settings
@@ -62,29 +84,39 @@ struct Settings {
 }
 
 
-#[derive(Default, Clone, Debug)]
 struct Buttons {
-    gotomain_state: button::State,
-    gototesting_state: button::State,
-    gotolang_state: button::State,
-    gotosetting_state: button::State,
-    shift_state: button::State,
-    next_state: button::State,
-    submit_state: button::State,
-    space_state: button::State,
-    delete_state: button::State,
-    save_state: button::State,
-    button_state0: button::State, 
-    button_state1: button::State,
-    button_state2: button::State,
-    button_state3: button::State,
-    lang_state0: button::State,
-    lang_state1: button::State,
-    basic_state: button::State,
-    intermediate_state: button::State,
-    advanced_state: button::State,
+    button_states: HashMap<&'static str, button::State>,
+    letter_states: HashMap<&'static str, button::State>,
     settings: SettingButtons,
+}
 
+impl Default for Buttons {
+    fn default() -> Self {
+        Self {
+            button_states: {
+                let mut map = HashMap::new();
+                let list = [
+                    "gotomain", "gototesting","gotolang","gotosetting", 
+                    "shift", "next", "submit", "space", "delete", 
+                    "save", "button_state0", "button_state1", "button_state2", 
+                    "button_state3", "lang_state0", "lang_state1", "basic",
+                    "intermediate", "advanced"
+                ];
+                for i in list{
+                    map.insert(i,button::State::default());
+                }
+                map
+            },
+            letter_states: {
+                let mut map: HashMap<&str, button::State> = HashMap::new();
+                for i in 0..26{
+                    map.insert(format!("state{}",i).as_str(),button::State::default());
+                }
+                map
+            },
+            settings: SettingButtons::default(),
+        }
+    }
 }
 #[derive(Clone, Debug, Default)]
 struct SettingButtons {
@@ -99,28 +131,12 @@ struct SettingButtons {
     load_state: button::State,
 }
 
+
 #[derive(Debug, Clone)]
 enum Message {
     EventOccurred(iced_native::Event),
-    GotoMainButton,
-    GotoTestingButton,
-    GotoLangButton,
-    GotoSettingButton,
-    ShiftButton,
-    NextButton,
-    SubmitButton,
-    SpaceButton,
-    DeleteButton,
-    SaveButton,
-    ButtonPressed0,
-    ButtonPressed1,
-    ButtonPressed2,
-    ButtonPressed3,
-    LangButton0,
-    LangButton1,
-    BasicButton,
-    IntermediateButton,
-    AdvancedButton,
+    ButtonPressed(String),
+    LetterPressed(String),
     SeperateCheckBox(bool),
     SoundBox(bool),
     VolumeSlider(i32),
@@ -134,15 +150,14 @@ enum Message {
     LoadButton,
 }
 
-
 fn pushfn(letter: String) {
     LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
-    println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
-    COLOUR.lock_mut().unwrap()[0] = 0
+    //println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
+    COLOUR.store(0, Ordering::SeqCst)
 }
 
 fn shiftfn(letter: String) -> String {
-    if X.lock_mut().unwrap()[0] == 1 {
+    if X.load(Ordering::Relaxed) == 1 {
         return letter.to_uppercase();
     } else {
         return letter.to_lowercase();
@@ -150,41 +165,41 @@ fn shiftfn(letter: String) -> String {
 }
 
 fn shiftvaluefn() {
-    if X.lock_mut().unwrap()[0] == 1 {
-        X.lock_mut().unwrap()[0] = 0;
+    if X.load(Ordering::Relaxed) == 1 {
+        X.store(0, Ordering::SeqCst) ;
     } else {
-        X.lock_mut().unwrap()[0] = 1;
+        X.store(1, Ordering::SeqCst);
     }
 }
 
 fn shiftscreenfn(destination: usize) {
-
-
-    SCREEN.lock_mut().unwrap()[0] = destination;
-    N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
+    TIME.lock_mut().unwrap().clear();
+    TIME.lock_mut().unwrap().push(Instant::now());
+    SCREEN.store(destination.try_into().unwrap(), Ordering::SeqCst);
+    N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len().try_into().unwrap()), Ordering::SeqCst);
     LETTERS.lock_mut().unwrap().clear();
-    COLOUR.lock_mut().unwrap()[0] = 0
+    COLOUR.store(0, Ordering::SeqCst);
 }
 
 fn sumbitfn() {
-    println!("{:?}",LETTERS.lock_mut().unwrap().concat());
+    //println!("{:?}",LETTERS.lock_mut().unwrap().concat());
     
-    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]]{
-        println!("true");
-        COLOUR.lock_mut().unwrap()[0] = 2;
-        SCREEN.lock_mut().unwrap()[0] = 2
+    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize]{
+        //println!("true");
+        COLOUR.store(2, Ordering::SeqCst);
+        SCREEN.store(2, Ordering::SeqCst);
     } else {
-        println!("false");
-        COLOUR.lock_mut().unwrap()[0] = 1;
-        SCREEN.lock_mut().unwrap()[0] = 2
+        //println!("false");
+        COLOUR.store(1, Ordering::SeqCst);
+        SCREEN.store(2, Ordering::SeqCst);
     }
 }
 
 fn popfn() {
     if LETTERS.lock_mut().unwrap().len() != 0 {
         LETTERS.lock_mut().unwrap().pop();
-        println!("{}",LETTERS.lock_mut().unwrap().concat());
-        COLOUR.lock_mut().unwrap()[0] = 0
+        //println!("{}",LETTERS.lock_mut().unwrap().concat());
+        COLOUR.store(0, Ordering::SeqCst);
     } 
     
 }
@@ -193,21 +208,26 @@ fn nextfn() {
     TIME.lock_mut().unwrap().clear();
     TIME.lock_mut().unwrap().push(Instant::now());
     //println!("{}", ENGLISH.lock_mut().unwrap().len());
-    N.lock_mut().unwrap()[0] = thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len());
+    N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len().try_into().unwrap()), Ordering::SeqCst);
     LETTERS.lock_mut().unwrap().clear();
-    COLOUR.lock_mut().unwrap()[0] = 0
+    COLOUR.store(0, Ordering::SeqCst);
 }
 
-fn add_button<'a>(a: &'a mut button::State,b: String,c: Message) -> Button<'a, Message> {
-    return Button::new(a, body(b)).on_press(c);
+fn add_button<'a>(state: &'a mut button::State,content: String,message: Message) -> Button<'a, Message> {
+    return Button::new(state, body(content)).on_press(message);
 }
+
 
 fn index(num: usize) {
     let mut languages: Vec<String> = Vec::new();
     for file in fs::read_dir("./resources/languages/").unwrap() {
         languages.push(file.unwrap().path().display().to_string())
     }
-    let connection = sqlite::open(format!("{}", languages[LANG.lock_mut().unwrap()[0]])).unwrap();
+    let connection = sqlite::open(
+        format!(
+            "{}", languages[LANG.load(Ordering::Relaxed) as usize]
+        )
+    ).unwrap();
     let mut statement2 = connection
     .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
     .unwrap();
@@ -216,28 +236,28 @@ fn index(num: usize) {
         tables.push(statement2.read::<String>(0).unwrap())
     }
     if num < tables.len() {
-        SCREEN.lock_mut().unwrap()[0] = 1;
-        TABLE.lock_mut().unwrap()[0] = num;
+        SCREEN.store(1, Ordering::SeqCst);
+        TABLE.store(num.try_into().unwrap(), Ordering::SeqCst);
         loaddata();
         nextfn();
     }
 }
 fn loadtables<'a>(self1: &'a mut button::State, self2: &'a mut button::State, self3: &'a mut button::State) -> Vec<Button<'a, Message>> {
-    if LANG.lock_mut().unwrap()[0] == 0 {
+    if LANG.load(Ordering::Relaxed) == 0 {
         return vec![
-            add_button(self1, String::from("Enter basic"), Message::BasicButton), 
-            add_button(self2, String::from("Enter intermediate"), Message::IntermediateButton),
-            add_button(self3, String::from("Enter advanced"), Message::AdvancedButton)
+            add_button(self1, String::from("Enter basic"), Message::ButtonPressed("Basic".to_string())), 
+            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string())),
+            add_button(self3, String::from("Enter advanced"), Message::ButtonPressed("Advanced".to_string()))
             ];
-    } else if LANG.lock_mut().unwrap()[0] == 1 {
+    } else if LANG.load(Ordering::Relaxed) == 1 {
         return vec![
-            add_button(self1, String::from("Enter basic"), Message::BasicButton), 
-            add_button(self2, String::from("Enter intermediate"), Message::IntermediateButton),            
+            add_button(self1, String::from("Enter basic"), Message::ButtonPressed("Basic".to_string())), 
+            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string())),           
             ];
     } else {
         return vec![
-            add_button(self1, String::from("Enter basic"), Message::BasicButton), 
-            add_button(self2, String::from("Enter intermediate"), Message::IntermediateButton),            
+            add_button(self1, String::from("Enter basic"), Message::ButtonPressed("Basic".to_string())), 
+            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string())),          
             ];
     }
 }
@@ -247,7 +267,7 @@ fn loaddata() {
         //println!("{}", file.unwrap().path().display());
         languages.push(file.unwrap().path().display().to_string())
     }
-    let connection = sqlite::open(format!("{}", languages[LANG.lock_mut().unwrap()[0]])).unwrap();
+    let connection = sqlite::open(format!("{}", languages[LANG.load(Ordering::Relaxed) as usize])).unwrap();
     
     let mut statement2 = connection
     .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
@@ -259,7 +279,7 @@ fn loaddata() {
         tables.push(statement2.read::<String>(0).unwrap())
     }
     let mut statement = connection
-        .prepare(format!("SELECT * FROM {}", tables[TABLE.lock_mut().unwrap()[0]]))
+        .prepare(format!("SELECT * FROM {}", tables[TABLE.load(Ordering::Relaxed) as usize]))
         .unwrap();
 
     let mut vietnamese: Vec<String> = Vec::new();
@@ -286,16 +306,20 @@ fn loaddata() {
     }
 }
 fn changelang(num: usize) {
-
-    LANG.lock_mut().unwrap()[0] = num;
+    LANG.store(num.try_into().unwrap(), Ordering::SeqCst);
     shiftscreenfn(0);
     loaddata();
 }
-fn makelang(selfx: &mut Buttons) -> Element<Message>{
-    let lang0 = add_button(&mut selfx.lang_state0, String::from("Lang0"), Message::LangButton0);
-    let lang1 = add_button(&mut selfx.lang_state1, String::from("Lang1"), Message::LangButton1);
-    let langcolumn = Column::new().push(lang0).push(lang1);
-    let main: Element<Message> = Container::new(langcolumn)
+
+fn makelang<'a>(selfx: &'a mut Buttons) -> Element<'a, Message>{
+    let [state0, state1] = selfx.button_states.get_many_mut(["lang_state0", "lang_state1"]).unwrap();
+    let lang0 = add_button(state0, String::from("Lang0"), Message::ButtonPressed("Lang0".to_string()));
+    let lang1 = add_button(state1, String::from("Lang1"), Message::ButtonPressed("Lang1".to_string()));
+
+/*     let lang0 = add_button(selfx.button_states.get_mut("lang_state0").unwrap(), String::from("Lang0"), Message::LangButton0);
+    let lang1 = add_button(selfx.button_states.get_mut("lang_state1").unwrap(), String::from("Lang1"), Message::LangButton1);
+ */    let langcolumn = Column::new().push(lang0).push(lang1);
+    let main: Element<'a, Message> = Container::new(langcolumn)
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
@@ -366,8 +390,10 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
     let h4 = h4(String::from(format!("H4: {}", SETTINGS_USIZE.lock_mut().unwrap()[5])));
     let body = body(String::from(format!("Body: {}", SETTINGS_USIZE.lock_mut().unwrap()[6])));
     let reset = add_button(&mut selfx.settings.load_state, String::from("Reload Default"), Message::LoadButton);
-    let save = add_button(&mut selfx.save_state, String::from("Save"), Message::SaveButton); 
-    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
+    let [state0, state1] = selfx.button_states.get_many_mut(["save", "gotomain"]).unwrap();
+
+    let save = add_button(state0, String::from("Save"), Message::ButtonPressed("Save".to_string())); 
+    let exit = add_button(state1, String::from("Exit"), Message::ButtonPressed("Exit".to_string()));
     let row = Row::new().push(save).push(exit).push(reset);
 
     let settingcolumn = Column::new()
@@ -401,9 +427,11 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
 
 fn makemain(selfx: &mut Buttons) -> Element<Message>{
     let title = h1(String::from("October"));
-    let settings = add_button(&mut selfx.gotosetting_state, String::from("Settings"), Message::GotoSettingButton);
-    let langs = add_button(&mut selfx.gotolang_state, String::from("Languages"), Message::GotoLangButton);
-    let buttons = loadtables(&mut selfx.basic_state, &mut selfx.intermediate_state, &mut selfx.advanced_state);
+    let [state0, state1, state2, state3, state4] = selfx.button_states.get_many_mut(["gotosetting", "gotolang", "basic", "intermediate", "advanced"]).unwrap();
+
+    let settings = add_button(state0, String::from("Settings"), Message::ButtonPressed("Settings".to_string()));
+    let langs = add_button(state1, String::from("Languages"), Message::ButtonPressed("Languages".to_string()));
+    let buttons = loadtables(state2, state3, state4);
 
     let mut maincolumn = Column::new().push(settings).push(title).push(langs);
 
@@ -421,19 +449,33 @@ fn makemain(selfx: &mut Buttons) -> Element<Message>{
     return main;
 }
 fn makereview(selfx: &mut Buttons) -> Element<Message>{
+    let [state0, state1] = selfx.button_states.get_many_mut(["gotomain", "gototesting"]).unwrap();
 
-    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit"), Message::GotoMainButton);
+    let exit = add_button(state0, String::from("Exit"), Message::ButtonPressed("Exit".to_string()));
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
 
-    let subtitle1 = h3(String::from("Your Response")).color(colours[COLOUR.lock_mut().unwrap()[0]]).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let subtitle2 = h3(String::from("Vietnamese")).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    let subtitle3 = h3(String::from("English")).horizontal_alignment(alignment::Horizontal::Center).width(Length::Fill);
-    
-    let response = h4(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(60)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
-    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60));
-    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(60));
+    let subtitle1 = h3(String::from("Your Response"))
+        .color(colours[COLOUR.load(Ordering::Relaxed) as usize])
+        .horizontal_alignment(alignment::Horizontal::Center)
+        .width(Length::Fill);
 
-    let resume = add_button(&mut selfx.gototesting_state, String::from("Resume"), Message::GotoTestingButton);
+    let subtitle2 = h3(String::from("Vietnamese"))
+        .horizontal_alignment(alignment::Horizontal::Center)
+        .width(Length::Fill);
+
+    let subtitle3 = h3(String::from("English"))
+        .horizontal_alignment(alignment::Horizontal::Center)
+        .width(Length::Fill);
+    
+    let response = h4(format!("{}", LETTERS.lock_mut().unwrap().concat()))
+        .height(Length::Units(60))
+        .color(colours[COLOUR.load(Ordering::Relaxed) as usize]);
+    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize] ))
+        .height(Length::Units(60));
+    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize] ))
+        .height(Length::Units(60));
+
+    let resume = add_button(state1, String::from("Resume"), Message::ButtonPressed("Resume".to_string()));
     let column = Column::new().push(exit).push(subtitle1).push(response).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
     let review: Element<Message> = Container::new(column)
         .padding(100)
@@ -445,28 +487,41 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
 }
 
 fn makelevel(selfx: &mut Buttons) -> Element<Message>{
-    let timer = h4(format!("{:.2}",  (SETTINGS_USIZE.lock_mut().unwrap()[1] as f64 - TIME.lock_mut().unwrap()[0].elapsed().as_secs_f64())));
+    let timer = h4(
+        format!("{:.2}",  
+        (SETTINGS_USIZE.lock_mut().unwrap()[1] as f64 - TIME.lock_mut().unwrap()[0].elapsed().as_secs_f64()))
+    );
+    
     if TIME.lock_mut().unwrap()[0].elapsed().as_secs() >= SETTINGS_USIZE.lock_mut().unwrap()[1] as u64 {
         sumbitfn()
     }
-    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.lock_mut().unwrap()[0]] )).height(Length::Units(150));
+    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize] ))
+    .height(Length::Units(150));
     
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat())).height(Length::Units(150)).color(colours[COLOUR.lock_mut().unwrap()[0]]);
+    let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat()))
+    .height(Length::Units(150))
+    .color(colours[COLOUR.load(Ordering::Relaxed) as usize]);
+    let [state0, state1, state2, state3, state4, state5, state6, state7, state8, state9] = selfx.button_states.get_many_mut(["button_state0", "button_state1", "button_state2", "button_state3", "gotomain","shift","submit", "space", "delete","next"]).unwrap();
+    let letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
+    
+    let letterstates:[&mut ; 26] = selfx.letter_states.get_many_mut(letters).unwrap();
+   
 
     let buttons = [
-        add_button(&mut selfx.button_state0, shiftfn(String::from("a")), Message::ButtonPressed0),
-        add_button(&mut selfx.button_state1, shiftfn(String::from("b")), Message::ButtonPressed1),
-        add_button(&mut selfx.button_state2, shiftfn(String::from("c")), Message::ButtonPressed2),
-        add_button(&mut selfx.button_state3, shiftfn(String::from("d")), Message::ButtonPressed3),
+        add_button(state0, shiftfn(String::from("a")), Message::LetterPressed("a".to_string())),
+        add_button(state1, shiftfn(String::from("b")), Message::LetterPressed("b".to_string())),
+        add_button(state2, shiftfn(String::from("c")), Message::LetterPressed("c".to_string())),
+        add_button(state3, shiftfn(String::from("d")), Message::LetterPressed("d".to_string())),
     ];
 
-    let exit = add_button(&mut selfx.gotomain_state, String::from("Exit Testing"), Message::GotoMainButton);
-    let shift = add_button(&mut selfx.shift_state, String::from("Shift"), Message::ShiftButton);
-    let submit = add_button(&mut selfx.submit_state, String::from("submit"), Message::SubmitButton);
-    let space = add_button(&mut selfx.space_state, String::from("space"), Message::SpaceButton);
-    let delete = add_button(&mut selfx.delete_state, String::from("delete"), Message::DeleteButton);
-    let next = add_button(&mut selfx.next_state, String::from("next"), Message::NextButton);
+    let exit = add_button(state4, String::from("Exit Testing"), Message::ButtonPressed("Exit".to_string()));
+    let shift = add_button(state5, String::from("Shift"), Message::ButtonPressed("Shift".to_string()));
+    let submit = add_button(state6, String::from("submit"), Message::ButtonPressed("Submit".to_string()));
+    let space = add_button(state7, String::from("space"), Message::ButtonPressed("Space".to_string()));
+    let delete = add_button(state8, String::from("delete"), Message::ButtonPressed("Delete".to_string()));
+    let next = add_button(state9, String::from("next"), Message::ButtonPressed("Next".to_string()));
 
     let mut userrow = Row::new();
     userrow = userrow.push(submit).push(space).push(delete).push(next).push(shift);
@@ -507,25 +562,27 @@ impl Application for Buttons {
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::LoadButton => loadsettings(),
-            Message::GotoMainButton => shiftscreenfn(0),
-            Message::GotoLangButton => shiftscreenfn(3),
-            Message::GotoTestingButton => shiftscreenfn(1),
-            Message::GotoSettingButton => shiftscreenfn(4),
-            Message::BasicButton => index(0),
-            Message::IntermediateButton => index(1),
-            Message::AdvancedButton => index(2),
-            Message::SubmitButton => sumbitfn(),
-            Message::SpaceButton => pushfn(String::from(" ")),
-            Message::DeleteButton => popfn(),
-            Message::NextButton => nextfn(),
-            Message::ShiftButton => shiftvaluefn(),
-            Message::LangButton0 => changelang(0),
-            Message::LangButton1 => changelang(1),
-            Message::ButtonPressed0 => pushfn(String::from("a")),
-            Message::ButtonPressed1 => pushfn(String::from("b")),
-            Message::ButtonPressed2 => pushfn(String::from("c")),
-            Message::ButtonPressed3 => pushfn(String::from("d")),
-            Message::SaveButton => savefn(),
+            Message::ButtonPressed(string) => {
+                match string.as_str() {
+                    "Basic" => index(0),
+                    "Intermediate" => index(1),
+                    "Advanced" => index(2),
+                    "Lang0" => changelang(0),
+                    "Lang1" => changelang(1),
+                    "Save" => savefn(),
+                    "Exit" => shiftscreenfn(0),
+                    "Settings" => shiftscreenfn(4),
+                    "Languages" => shiftscreenfn(3),
+                    "Resume" => shiftscreenfn(1),
+                    "Shift" => shiftvaluefn(),
+                    "Submit" => sumbitfn(),
+                    "Space" => pushfn(String::from(" ")),
+                    "Delete" => popfn(),
+                    "Next" => nextfn(),
+                    _ => (),
+                }
+            }
+            Message::LetterPressed(string) => pushfn(string),
             Message::EventOccurred(event) => {
                 if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
                     pushfn(String::from(" "))
@@ -555,15 +612,15 @@ impl Application for Buttons {
     }
 
     fn view(&mut self) -> Element<Message> {
-        if SCREEN.lock_mut().unwrap()[0] == 0 {
+        if SCREEN.load(Ordering::Relaxed) == 0 {
             return makemain(self);
-        } else if SCREEN.lock_mut().unwrap()[0] == 1 {
+        } else if SCREEN.load(Ordering::Relaxed) == 1 {
             return makelevel(self);
-        } else if SCREEN.lock_mut().unwrap()[0] == 2 {
+        } else if SCREEN.load(Ordering::Relaxed) == 2 {
             return makereview(self);
-        } else if SCREEN.lock_mut().unwrap()[0] == 3 {
+        } else if SCREEN.load(Ordering::Relaxed) == 3 {
             return makelang(self);
-        } else if SCREEN.lock_mut().unwrap()[0] == 4 {
+        } else if SCREEN.load(Ordering::Relaxed) == 4 {
             return makesettings(self);
         } else {
             return makemain(self);
@@ -623,13 +680,8 @@ fn body(text: String) -> Text {
 fn main() -> iced::Result {
     loadsettings();
     let rgba = vec![0, 0, 0, 255];
-    TABLE.lock_mut().unwrap().push(0);
-    LANG.lock_mut().unwrap().push(0);
     loaddata();
-    N.lock_mut().unwrap().push(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()));
-    COLOUR.lock_mut().unwrap().push(0);
-    X.lock_mut().unwrap().push(0);
-    SCREEN.lock_mut().unwrap().push(0);
+    N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()).try_into().unwrap(), Ordering::SeqCst);
     TIME.lock_mut().unwrap().push(Instant::now());
 
     let setting: IcedSettings<()> = IcedSettings {
@@ -645,7 +697,7 @@ fn main() -> iced::Result {
             position: Specific(0, 0),
         },
         default_font: Some(include_bytes!("../../resources/Arial Unicode MS Font.ttf")),
-        antialiasing: true,
+        antialiasing: false,
         id: Some("October".to_string()),
         flags: (),
         default_text_size: 20,
