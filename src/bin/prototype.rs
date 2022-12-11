@@ -5,7 +5,7 @@ use std::{
     collections::HashMap,
 };
 use iced::{
-    button, Button, 
+    button::{self}, Button, 
     Checkbox, Scrollable, 
     Slider, slider, 
     Element, Command, 
@@ -24,7 +24,7 @@ use rand::{thread_rng, Rng};
 use iced_native::{Event, keyboard};
 use sqlite::State as SqlState;
 use serde_derive::Deserialize;
-use toml;
+use toml::{self, value::Table};
 
 
 // Global variables for storing the letters to be typed, the English and Vietnamese words,
@@ -43,8 +43,16 @@ static X: AtomicU32 = AtomicU32::new(0);
 static SCREEN: AtomicU32 = AtomicU32::new(0);
 static TABLE: AtomicU32 = AtomicU32::new(0);
 static LANG: AtomicU32 = AtomicU32::new(0);
-
-
+const LANGONE: [&str;26] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
+const LANGTWO: [&str; 33] = [
+    "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
+    "đ",
+    "ỏ","ơ","ờ","ồ","ó","ô","ọ","ộ","ớ","ở",
+    "ư","ụ","ữ","ú", "ủ",
+    "í","ì","ị",
+    "ế","ẹ", "ể", "ề"
+];
+const PUNCTUATION: [&str; 8] = ["(",")", ";", ":", ",", ".", "?", "!"];
 
 // Struct for holding the program's settings, including text size and time limit settings.
 #[derive(Deserialize, Debug)]
@@ -86,7 +94,9 @@ struct Settings {
 
 struct Buttons {
     button_states: HashMap<&'static str, button::State>,
-    letter_states: HashMap<&'static str, button::State>,
+    lang_one_states: HashMap<&'static str, button::State>,
+    lang_two_states: HashMap<&'static str, button::State>,
+    punctuation_states: HashMap<&'static str, button::State>,
     settings: SettingButtons,
 }
 
@@ -95,6 +105,7 @@ impl Default for Buttons {
         Self {
             button_states: {
                 let mut map = HashMap::new();
+                
                 let list = [
                     "gotomain", "gototesting","gotolang","gotosetting", 
                     "shift", "next", "submit", "space", "delete", 
@@ -107,12 +118,43 @@ impl Default for Buttons {
                 }
                 map
             },
-            letter_states: {
-                let mut map: HashMap<&str, button::State> = HashMap::new();
-                for i in 0..26{
-                    map.insert(format!("state{}",i).as_str(),button::State::default());
+            lang_one_states: {
+                let mut map = HashMap::new();
+
+                // Add characters from LANGONE to the map
+                for i in LANGONE {
+                    map.insert(i, button::State::default());
+                }
+                
+                // Add characters from LANGTWO to the map
+                for i in LANGTWO {
+                    map.insert(i, button::State::default());
+                }
+                
+                // Add characters from PUNCTUATION to the map
+                for i in PUNCTUATION {
+                    map.insert(i, button::State::default());
                 }
                 map
+                    
+            },
+            lang_two_states: {
+                let mut map = HashMap::new();        
+                // Add characters from LANGTWO to the map
+                for i in LANGTWO {
+                    map.insert(i, button::State::default());
+                }
+                map
+                    
+            },
+            punctuation_states: {
+                let mut map = HashMap::new();
+                // Add characters from PUNCTUATION to the map
+                for i in PUNCTUATION {
+                    map.insert(i, button::State::default());
+                }
+                map
+                    
             },
             settings: SettingButtons::default(),
         }
@@ -157,7 +199,7 @@ fn pushfn(letter: String) {
 }
 
 fn shiftfn(letter: String) -> String {
-    if X.load(Ordering::Relaxed) == 1 {
+    if X.load(Ordering::SeqCst) == 1 {
         return letter.to_uppercase();
     } else {
         return letter.to_lowercase();
@@ -165,7 +207,7 @@ fn shiftfn(letter: String) -> String {
 }
 
 fn shiftvaluefn() {
-    if X.load(Ordering::Relaxed) == 1 {
+    if X.load(Ordering::SeqCst) == 1 {
         X.store(0, Ordering::SeqCst) ;
     } else {
         X.store(1, Ordering::SeqCst);
@@ -184,7 +226,7 @@ fn shiftscreenfn(destination: usize) {
 fn sumbitfn() {
     //println!("{:?}",LETTERS.lock_mut().unwrap().concat());
     
-    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize]{
+    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize]{
         //println!("true");
         COLOUR.store(2, Ordering::SeqCst);
         SCREEN.store(2, Ordering::SeqCst);
@@ -225,14 +267,14 @@ fn index(num: usize) {
     }
     let connection = sqlite::open(
         format!(
-            "{}", languages[LANG.load(Ordering::Relaxed) as usize]
+            "{}", languages[LANG.load(Ordering::SeqCst) as usize]
         )
     ).unwrap();
     let mut statement2 = connection
     .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
     .unwrap();
     let mut tables: Vec<String> = Vec::new();
-    while let Ok(State::Row) = statement2.next() {
+    while let Ok(SqlState::Row) = statement2.next() {
         tables.push(statement2.read::<String>(0).unwrap())
     }
     if num < tables.len() {
@@ -243,23 +285,22 @@ fn index(num: usize) {
     }
 }
 fn loadtables<'a>(self1: &'a mut button::State, self2: &'a mut button::State, self3: &'a mut button::State) -> Vec<Button<'a, Message>> {
-    if LANG.load(Ordering::Relaxed) == 0 {
-        return vec![
+    match LANG.load(Ordering::SeqCst) {
+        0 => vec![
             add_button(self1, String::from("Enter basic"), Message::ButtonPressed("Basic".to_string())), 
             add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string())),
             add_button(self3, String::from("Enter advanced"), Message::ButtonPressed("Advanced".to_string()))
-            ];
-    } else if LANG.load(Ordering::Relaxed) == 1 {
-        return vec![
+        ],
+        1 => vec![
             add_button(self1, String::from("Enter basic"), Message::ButtonPressed("Basic".to_string())), 
-            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string())),           
-            ];
-    } else {
-        return vec![
+            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string()))
+        ],
+        _ => vec![
             add_button(self1, String::from("Enter basic"), Message::ButtonPressed("Basic".to_string())), 
-            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string())),          
-            ];
+            add_button(self2, String::from("Enter intermediate"), Message::ButtonPressed("Intermediate".to_string()))
+        ]
     }
+    
 }
 fn loaddata() {
     let mut languages: Vec<String> = Vec::new();
@@ -267,26 +308,26 @@ fn loaddata() {
         //println!("{}", file.unwrap().path().display());
         languages.push(file.unwrap().path().display().to_string())
     }
-    let connection = sqlite::open(format!("{}", languages[LANG.load(Ordering::Relaxed) as usize])).unwrap();
+    let connection = sqlite::open(format!("{}", languages[LANG.load(Ordering::SeqCst) as usize])).unwrap();
     
     let mut statement2 = connection
     .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
     .unwrap();
     let mut tables: Vec<String> = Vec::new();
 
-    while let Ok(State::Row) = statement2.next() {
+    while let Ok(SqlState::Row) = statement2.next() {
         //println!("{}", statement2.read::<String>(0).unwrap());
         tables.push(statement2.read::<String>(0).unwrap())
     }
     let mut statement = connection
-        .prepare(format!("SELECT * FROM {}", tables[TABLE.load(Ordering::Relaxed) as usize]))
+        .prepare(format!("SELECT * FROM {}", tables[TABLE.load(Ordering::SeqCst) as usize]))
         .unwrap();
 
     let mut vietnamese: Vec<String> = Vec::new();
     let mut english: Vec<String> = Vec::new();
     let mut typename: Vec<String> = Vec::new();
 
-    while let Ok(State::Row) = statement.next() {
+    while let Ok(SqlState::Row) = statement.next() {
         //println!("{} = {}", statement.read::<String>(0).unwrap(), statement.read::<String>(1).unwrap());
         //println!("{}",statement.read::<String>(0).unwrap());
         english.push(statement.read::<String>(0).unwrap());
@@ -448,6 +489,20 @@ fn makemain(selfx: &mut Buttons) -> Element<Message>{
         .into();
     return main;
 }
+fn makedata(selfx: &mut Buttons) -> Element<Message>{
+    let n = Text::new(format!("N: {:?}", N));
+    let table = Text::new(format!("table: {:?}", TABLE));
+    let maincolumn = Column::new().push(n).push(table);
+
+    let main: Element<Message> = Container::new(maincolumn)
+        .padding(100)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x()
+        .center_y()
+        .into();
+    return main;
+}
 fn makereview(selfx: &mut Buttons) -> Element<Message>{
     let [state0, state1] = selfx.button_states.get_many_mut(["gotomain", "gototesting"]).unwrap();
 
@@ -455,7 +510,7 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
 
     let subtitle1 = h3(String::from("Your Response"))
-        .color(colours[COLOUR.load(Ordering::Relaxed) as usize])
+        .color(colours[COLOUR.load(Ordering::SeqCst) as usize])
         .horizontal_alignment(alignment::Horizontal::Center)
         .width(Length::Fill);
 
@@ -469,10 +524,10 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
     
     let response = h4(format!("{}", LETTERS.lock_mut().unwrap().concat()))
         .height(Length::Units(60))
-        .color(colours[COLOUR.load(Ordering::Relaxed) as usize]);
-    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize] ))
+        .color(colours[COLOUR.load(Ordering::SeqCst) as usize]);
+    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
         .height(Length::Units(60));
-    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize] ))
+    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
         .height(Length::Units(60));
 
     let resume = add_button(state1, String::from("Resume"), Message::ButtonPressed("Resume".to_string()));
@@ -495,44 +550,72 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     if TIME.lock_mut().unwrap()[0].elapsed().as_secs() >= SETTINGS_USIZE.lock_mut().unwrap()[1] as u64 {
         sumbitfn()
     }
-    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::Relaxed) as usize] ))
+    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
     .height(Length::Units(150));
     
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
     let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat()))
     .height(Length::Units(150))
-    .color(colours[COLOUR.load(Ordering::Relaxed) as usize]);
-    let [state0, state1, state2, state3, state4, state5, state6, state7, state8, state9] = selfx.button_states.get_many_mut(["button_state0", "button_state1", "button_state2", "button_state3", "gotomain","shift","submit", "space", "delete","next"]).unwrap();
-    let letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+    .color(colours[COLOUR.load(Ordering::SeqCst) as usize]);
+    let buttonnames = ["gotomain","shift","submit", "space", "delete","next"];
+    let [
+        state0, 
+        state1, 
+        state2, 
+        state3, 
+        state4, 
+        state5
+        ] = selfx.button_states.get_many_mut(buttonnames).unwrap();
+    let mut buttonone: Vec<Button<Message>> = Vec::new();
+    let mut x = 0;
+    //let list: [&mut State; 26];
 
+    let list = selfx.lang_one_states.get_many_mut(LANGONE).unwrap();
     
-    let letterstates:[&mut ; 26] = selfx.letter_states.get_many_mut(letters).unwrap();
-   
+    for i in list{
+        buttonone.push(add_button(i, LANGONE[x].to_string(),Message::LetterPressed(LANGONE[x].to_string())));
+        x+=1;
+    } 
+    x=0;
+    let mut buttontwo: Vec<Button<Message>> = Vec::new();
+    let list = selfx.lang_two_states.get_many_mut(LANGTWO).unwrap();
+    for i in list{
+        buttontwo.push(add_button(i, LANGTWO[x].to_string(),Message::LetterPressed(LANGTWO[x].to_string())));
+        x+=1;
+    }
+    x=0;
+    let mut buttons: Vec<Button<Message>> = Vec::new();
+    let list = selfx.punctuation_states.get_many_mut(PUNCTUATION).unwrap();
+    for i in list{
+        buttons.push(add_button(i, PUNCTUATION[x].to_string(),Message::LetterPressed(PUNCTUATION[x].to_string())));
+        x+=1;
+    }
 
-    let buttons = [
-        add_button(state0, shiftfn(String::from("a")), Message::LetterPressed("a".to_string())),
-        add_button(state1, shiftfn(String::from("b")), Message::LetterPressed("b".to_string())),
-        add_button(state2, shiftfn(String::from("c")), Message::LetterPressed("c".to_string())),
-        add_button(state3, shiftfn(String::from("d")), Message::LetterPressed("d".to_string())),
-    ];
-
-    let exit = add_button(state4, String::from("Exit Testing"), Message::ButtonPressed("Exit".to_string()));
-    let shift = add_button(state5, String::from("Shift"), Message::ButtonPressed("Shift".to_string()));
-    let submit = add_button(state6, String::from("submit"), Message::ButtonPressed("Submit".to_string()));
-    let space = add_button(state7, String::from("space"), Message::ButtonPressed("Space".to_string()));
-    let delete = add_button(state8, String::from("delete"), Message::ButtonPressed("Delete".to_string()));
-    let next = add_button(state9, String::from("next"), Message::ButtonPressed("Next".to_string()));
+    let exit = add_button(state0, String::from("Exit Testing"), Message::ButtonPressed("Exit".to_string()));
+    let shift = add_button(state1, String::from("Shift"), Message::ButtonPressed("Shift".to_string()));
+    let submit = add_button(state2, String::from("submit"), Message::ButtonPressed("Submit".to_string()));
+    let space = add_button(state3, String::from("space"), Message::ButtonPressed("Space".to_string()));
+    let delete = add_button(state4, String::from("delete"), Message::ButtonPressed("Delete".to_string()));
+    let next = add_button(state5, String::from("next"), Message::ButtonPressed("Next".to_string()));
 
     let mut userrow = Row::new();
     userrow = userrow.push(submit).push(space).push(delete).push(next).push(shift);
 
 
     let mut row1 = Row::new();
-    for button in buttons {
+    for button in buttonone {
         row1 = row1.push(button);
     };
+    let mut row2 = Row::new();
+    for button in buttontwo {
+        row2 = row2.push(button);
+    };
+    let mut row3 = Row::new();
+    for button in buttons {
+        row3 = row3.push(button);
+    };
     let utilrow = Row::new().push(timer).push(exit);
-    let column1 = Column::new().push(utilrow.width(Length::Fill)).push(english).push(text1).push(userrow).push(row1).width(Length::Fill).align_items(iced::Alignment::Center);
+    let column1 = Column::new().push(utilrow.width(Length::Fill)).push(english).push(text1).push(userrow).push(row1).push(row2).push(row3).width(Length::Fill).align_items(iced::Alignment::Center);
     let testing: Element<Message> = Container::new(column1)
         .padding(100)
         .width(Length::Fill)
@@ -584,16 +667,27 @@ impl Application for Buttons {
             }
             Message::LetterPressed(string) => pushfn(string),
             Message::EventOccurred(event) => {
-                if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) = event {
-                    pushfn(String::from(" "))
-                } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) = event {
-                    shiftvaluefn()
-                } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _}) = event {
-                    nextfn()
-                } else if let Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) = event {
-                    sumbitfn()
-                } 
+                match event {
+                    Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) => {
+                        pushfn(String::from(" "));
+                    },
+                    Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) => {
+                        shiftvaluefn();
+                    },
+                    Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Right, modifiers: _}) => {
+                        nextfn();
+                    },
+                    Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Enter, modifiers: _ }) => {
+                        sumbitfn();
+                    },
+                    Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Backspace, modifiers: _ }) => {
+                        popfn();
+                    }
+                    _ => (),
+                }
             },
+            
+            
             Message::SeperateCheckBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[0] = state,
             Message::SoundBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[1] = state,
             Message::TimedBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[2] = state,
@@ -612,20 +706,15 @@ impl Application for Buttons {
     }
 
     fn view(&mut self) -> Element<Message> {
-        if SCREEN.load(Ordering::Relaxed) == 0 {
-            return makemain(self);
-        } else if SCREEN.load(Ordering::Relaxed) == 1 {
-            return makelevel(self);
-        } else if SCREEN.load(Ordering::Relaxed) == 2 {
-            return makereview(self);
-        } else if SCREEN.load(Ordering::Relaxed) == 3 {
-            return makelang(self);
-        } else if SCREEN.load(Ordering::Relaxed) == 4 {
-            return makesettings(self);
-        } else {
-            return makemain(self);
-        }
-        
+        match SCREEN.load(Ordering::SeqCst) {
+            0 => makemain(self),
+            1 => makelevel(self),
+            2 => makereview(self),
+            3 => makelang(self),
+            4 => makesettings(self),
+            5 => makedata(self),
+            _ => makemain(self),
+        }   
     }
     
 }
