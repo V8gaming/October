@@ -24,7 +24,7 @@ cargo run --bin generator; cargo run --bin generated
   - [ ] Sound or no sound
   - [ ] Check for both meanings seperated by a semicolon, or check for either
   - [x] Volume
-  - [ ] Timed
+  - [x] Timed
   - [x] length of timer
 - [ ] languages as folder(database, settings.toml)
 - [x] Title in main page, and selected language.

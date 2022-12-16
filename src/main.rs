@@ -45,7 +45,7 @@ static TABLE: AtomicU32 = AtomicU32::new(0);
 static LANG: AtomicU32 = AtomicU32::new(0);
 static MAXSTATES: AtomicU32 = AtomicU32::new(0);
 const LANGONE: [&str;26] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-const LANGTWO: [&str; 33] = [
+const LANGTWO: [&str;33] = [
     "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
     "đ",
     "ỏ","ơ","ờ","ồ","ó","ô","ọ","ộ","ớ","ở",
@@ -53,7 +53,7 @@ const LANGTWO: [&str; 33] = [
     "í","ì","ị",
     "ế","ẹ", "ể", "ề"
 ];
-const PUNCTUATION: [&str; 8] = ["(",")", ";", ":", ",", ".", "?", "!"];
+const PUNCTUATION: [&str;8] = ["(",")", ";", ":", ",", ".", "?", "!"];
 
 mod settings;
 
@@ -78,8 +78,7 @@ impl Default for Buttons {
                 let list = [
                     "gotomain", "gototesting","gotolang","gotosetting", "gotodata", 
                     "shift", "next", "submit", "space", "delete", 
-                    "save", "button_state0", "button_state1", "button_state2", 
-                    "button_state3", "lang_state0", "lang_state1"
+                    "save", "lang_state0", "lang_state1"
                 ];
                 for i in list{
                     map.insert(i,button::State::default());
