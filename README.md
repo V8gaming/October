@@ -12,7 +12,7 @@ cargo run --bin generator; cargo run --bin generated
 
 - [x] Convert Sandbox to Application
 - [x] Keypresses
-- [ ] Timer
+- [x] Timer
 - [ ] Sound
 - [x] Main page
 - [x] Remake database as (table name = level. data = [english, vietnamese, type])
@@ -36,7 +36,7 @@ cargo run --bin generator; cargo run --bin generated
 
 ## Future
 
-- [ ] *do this without generator, for hot loading of languages.
+- [x] *do this without generator, for hot loading of languages.
+- [x] Compile without generator
 - [ ] No Vecs
-- [ ] Compile without generator
 - [ ] No unwraps

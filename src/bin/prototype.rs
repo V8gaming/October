@@ -3,6 +3,7 @@ use std::{
     fs, io::Write, 
     time::Instant,
     collections::HashMap,
+    convert::TryInto,
 };
 use iced::{
     button::{self}, Button, 
@@ -24,7 +25,7 @@ use rand::{thread_rng, Rng};
 use iced_native::{Event, keyboard};
 use sqlite::State as SqlState;
 use serde_derive::Deserialize;
-use toml::{self, value::Table};
+use toml::{self};
 
 
 // Global variables for storing the letters to be typed, the English and Vietnamese words,
@@ -43,6 +44,7 @@ static X: AtomicU32 = AtomicU32::new(0);
 static SCREEN: AtomicU32 = AtomicU32::new(0);
 static TABLE: AtomicU32 = AtomicU32::new(0);
 static LANG: AtomicU32 = AtomicU32::new(0);
+static MAXSTATES: AtomicU32 = AtomicU32::new(0);
 const LANGONE: [&str;26] = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
 const LANGTWO: [&str; 33] = [
     "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
@@ -97,6 +99,7 @@ struct Buttons {
     lang_one_states: HashMap<&'static str, button::State>,
     lang_two_states: HashMap<&'static str, button::State>,
     punctuation_states: HashMap<&'static str, button::State>,
+    table_states: HashMap<String, button::State>,
     settings: SettingButtons,
 }
 
@@ -107,11 +110,10 @@ impl Default for Buttons {
                 let mut map = HashMap::new();
                 
                 let list = [
-                    "gotomain", "gototesting","gotolang","gotosetting", 
+                    "gotomain", "gototesting","gotolang","gotosetting", "gotodata", 
                     "shift", "next", "submit", "space", "delete", 
                     "save", "button_state0", "button_state1", "button_state2", 
-                    "button_state3", "lang_state0", "lang_state1", "basic",
-                    "intermediate", "advanced"
+                    "button_state3", "lang_state0", "lang_state1"
                 ];
                 for i in list{
                     map.insert(i,button::State::default());
@@ -156,6 +158,17 @@ impl Default for Buttons {
                 map
                     
             },
+            table_states: {
+                let mut map = HashMap::new();
+                let mut vec = Vec::new();
+                for i in 0..MAXSTATES.load(Ordering::SeqCst) {
+                    vec.push(format!("state{}",i));
+                }
+                for i in vec {
+                    map.insert(i, button::State::default());
+                }
+                map
+            },
             settings: SettingButtons::default(),
         }
     }
@@ -178,6 +191,7 @@ struct SettingButtons {
 enum Message {
     EventOccurred(iced_native::Event),
     ButtonPressed(String),
+    IndexSent(usize),
     LetterPressed(String),
     SeperateCheckBox(bool),
     SoundBox(bool),
@@ -265,6 +279,13 @@ fn index(num: usize) {
     for file in fs::read_dir("./resources/languages/").unwrap() {
         languages.push(file.unwrap().path().display().to_string())
     }
+        // Sort the languages alphabetically
+    languages.sort_by(|a, b| a.cmp(b));
+
+/*     // Print the sorted languages
+    for language in &languages {
+        println!("{}", language);
+    } */
     let connection = sqlite::open(
         format!(
             "{}", languages[LANG.load(Ordering::SeqCst) as usize]
@@ -284,6 +305,7 @@ fn index(num: usize) {
         nextfn();
     }
 }
+/* 
 fn loadtables<'a>(self1: &'a mut button::State, self2: &'a mut button::State, self3: &'a mut button::State) -> Vec<Button<'a, Message>> {
     match LANG.load(Ordering::SeqCst) {
         0 => vec![
@@ -302,6 +324,54 @@ fn loadtables<'a>(self1: &'a mut button::State, self2: &'a mut button::State, se
     }
     
 }
+*/
+fn tablenames() -> Vec<String> {
+    let mut languages: Vec<String> = Vec::new();
+    let mut names: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        //println!("{}", file.unwrap().path().display());
+        languages.push(file.unwrap().path().display().to_string())
+    }
+
+    let connection = sqlite::open(format!("{}", languages[LANG.load(Ordering::SeqCst) as usize])).unwrap();
+    let mut statement2 = connection
+    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+    .unwrap();
+
+    while let Ok(SqlState::Row) = statement2.next() {
+        //println!("{}", statement2.read::<String>(0).unwrap());
+        names.push(statement2.read::<String>(0).unwrap())
+    }
+    return names;
+    
+
+}
+fn loadsizes() {
+    let mut languages: Vec<String> = Vec::new();
+    let mut templangvec: Vec<u32> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        //println!("{}", file.unwrap().path().display());
+        languages.push(file.unwrap().path().display().to_string())
+    }
+
+    for i in languages {
+        let connection = sqlite::open(format!("{}", i)).unwrap();
+        let mut statement2 = connection
+        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+        .unwrap();
+        let mut tables: Vec<String> = Vec::new();
+    
+        while let Ok(SqlState::Row) = statement2.next() {
+            //println!("{}", statement2.read::<String>(0).unwrap());
+            tables.push(statement2.read::<String>(0).unwrap())
+        }
+        templangvec.push(tables.len() as u32)
+    }
+
+    MAXSTATES.store(*templangvec.iter().max().unwrap(), Ordering::SeqCst)
+}
+
+
 fn loaddata() {
     let mut languages: Vec<String> = Vec::new();
     for file in fs::read_dir("./resources/languages/").unwrap() {
@@ -465,18 +535,50 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
         .into();
     return main;
 }
+fn loadsize() -> usize {
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        //println!("{}", file.unwrap().path().display());
+        languages.push(file.unwrap().path().display().to_string())
+    }
+    let connection = sqlite::open(format!("{}", languages[LANG.load(Ordering::SeqCst) as usize])).unwrap();
+    
+    let mut statement2 = connection
+    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
+    .unwrap();
+    let mut tables: Vec<String> = Vec::new();
+
+    while let Ok(SqlState::Row) = statement2.next() {
+        //println!("{}", statement2.read::<String>(0).unwrap());
+        tables.push(statement2.read::<String>(0).unwrap())
+    }
+    return tables.len();
+}
+
 
 fn makemain(selfx: &mut Buttons) -> Element<Message>{
     let title = h1(String::from("October"));
-    let [state0, state1, state2, state3, state4] = selfx.button_states.get_many_mut(["gotosetting", "gotolang", "basic", "intermediate", "advanced"]).unwrap();
+    let [state0, state1, state2] = selfx.button_states.get_many_mut(["gotosetting", "gotolang", "gotodata"]).unwrap();
 
     let settings = add_button(state0, String::from("Settings"), Message::ButtonPressed("Settings".to_string()));
     let langs = add_button(state1, String::from("Languages"), Message::ButtonPressed("Languages".to_string()));
-    let buttons = loadtables(state2, state3, state4);
+    let data = add_button(state2, String::from("Data"), Message::ButtonPressed("Data".to_string()));
 
-    let mut maincolumn = Column::new().push(settings).push(title).push(langs);
+    let mut x = 0;
 
-    for i in buttons  {
+    let mut maincolumn = Column::new().push(settings).push(title).push(langs).push(data);
+
+    let mut buttons: Vec<Button<Message>>=Vec::new();
+    let names = tablenames();
+    for i in selfx.table_states.values_mut() {
+        if x >= loadsize() {
+        } else {
+            buttons.push(add_button(i, names[x].to_string(), Message::IndexSent(x)));
+            x +=1;
+        }
+    };
+
+    for i in buttons {
         maincolumn = maincolumn.push(i);
     }
 
@@ -490,11 +592,18 @@ fn makemain(selfx: &mut Buttons) -> Element<Message>{
     return main;
 }
 fn makedata(selfx: &mut Buttons) -> Element<Message>{
+    let state = selfx.button_states.get_mut("gotomain").unwrap();
+
     let n = Text::new(format!("N: {:?}", N));
     let table = Text::new(format!("table: {:?}", TABLE));
-    let maincolumn = Column::new().push(n).push(table);
-
-    let main: Element<Message> = Container::new(maincolumn)
+    let lang = Text::new(format!("Lang: {:?}", LANG));
+    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
+        .height(Length::Units(60));
+    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
+        .height(Length::Units(60));
+    let maincolumn = Column::new().push(n).push(table).push(lang).push(english).push(vietnamese);
+    let exit = add_button(state, "exit".to_string(), Message::ButtonPressed("Exit".to_string()));
+    let main: Element<Message> = Container::new(maincolumn.push(exit))
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
@@ -645,6 +754,9 @@ impl Application for Buttons {
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::LoadButton => loadsettings(),
+            Message::IndexSent(usize) => {
+                index(usize)
+            }
             Message::ButtonPressed(string) => {
                 match string.as_str() {
                     "Basic" => index(0),
@@ -656,6 +768,7 @@ impl Application for Buttons {
                     "Exit" => shiftscreenfn(0),
                     "Settings" => shiftscreenfn(4),
                     "Languages" => shiftscreenfn(3),
+                    "Data" => shiftscreenfn(5),
                     "Resume" => shiftscreenfn(1),
                     "Shift" => shiftvaluefn(),
                     "Submit" => sumbitfn(),
@@ -768,6 +881,7 @@ fn body(text: String) -> Text {
 
 fn main() -> iced::Result {
     loadsettings();
+    loadsizes();
     let rgba = vec![0, 0, 0, 255];
     loaddata();
     N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()).try_into().unwrap(), Ordering::SeqCst);
