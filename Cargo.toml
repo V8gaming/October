@@ -1,27 +1,21 @@
 [package]
 name = "october"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 iced = { version = "0.4.0", features = ["image"]}
-iced_wgpu = { features = ["webgl"] }
 iced_native = "0.5.1"
 iced_graphics = "0.3.1"
 iced_style = "0.4.0"
 env_logger = "0.8"
-global = "0.4.3"
 rand = "0.8.5"
 toml = "0.5.9"
 serde = "1.0.147"
 serde_derive = "1.0.147"
 sqlite = "0.27.3"
-
-[dev-dependencies]
-criterion = "0.3"
-
-[[bench]]
-name = "my_benchmark"
-harness = false
+tokio = { version = "1.23.0", features = ["sync"] }
+lazy_static = "1.4.0"
+futures = "0.3.25"

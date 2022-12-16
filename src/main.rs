@@ -4,6 +4,7 @@ use std::{
     time::Instant,
     collections::HashMap,
     convert::TryInto,
+    sync::atomic::{AtomicU32, Ordering},
 };
 use iced::{
     button::{self}, Button, 
@@ -19,23 +20,33 @@ use iced::{
     alignment, scrollable,
     window::Position::Specific, window::Icon
 };
-use std::sync::atomic::{AtomicU32, Ordering};
-use global::Global;
+use futures::executor::block_on;
+use lazy_static::lazy_static;
 use rand::{thread_rng, Rng};
 use iced_native::{Event, keyboard};
 use sqlite::State as SqlState;
 use toml::{self};
+use tokio::sync::RwLock;
 
 
 // Global variables for storing the letters to be typed, the English and Vietnamese words,
 // and other program state such as the current screen, language, and time.
 
-static LETTERS: Global<Vec<String>> = Global::new();
-static ENGLISH: Global<Vec<String>> = Global::new();
-static VIETNAMESE: Global<Vec<String>> = Global::new();
-static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();
-static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();
-static TIME: Global<Vec<Instant>> = Global::new();
+//static LETTERS: Global<Vec<String>> = Global::new();
+//static ENGLISH: Global<Vec<String>> = Global::new();
+//static VIETNAMESE: Global<Vec<String>> = Global::new();
+//static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();
+//static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();
+//static TIME: Global<Vec<Instant>> = Global::new();
+
+lazy_static! {
+    static ref LETTERS: RwLock<Vec<String>> = RwLock::new(Vec::new());
+    static ref ENGLISH: RwLock<Vec<String>> = RwLock::new(Vec::new());
+    static ref VIETNAMESE: RwLock<Vec<String>> = RwLock::new(Vec::new());
+    static ref SETTINGS_USIZE: RwLock<Vec<usize>> = RwLock::new(Vec::new());
+    static ref SETTINGS_BOOL: RwLock<Vec<bool>> = RwLock::new(Vec::new());
+    static ref TIME: RwLock<Instant> = RwLock::new(Instant::now());
+}
 
 static N: AtomicU32 = AtomicU32::new(0);
 static COLOUR:AtomicU32 = AtomicU32::new(0);
@@ -186,7 +197,9 @@ enum Message {
 }
 
 fn pushfn(letter: String) {
-    LETTERS.lock_mut().unwrap().push(shiftfn(letter.to_string()));
+    let mut blocking_letters = LETTERS.blocking_write();
+    blocking_letters.push(shiftfn(letter.to_string()));
+    drop(blocking_letters);
     //println!("ADDED {} TO {}", letter,LETTERS.lock_mut().unwrap().concat());
     COLOUR.store(0, Ordering::SeqCst)
 }
@@ -208,18 +221,24 @@ fn shiftvaluefn() {
 }
 
 fn shiftscreenfn(destination: usize) {
-    TIME.lock_mut().unwrap().clear();
-    TIME.lock_mut().unwrap().push(Instant::now());
+    let mut blocking_task = TIME.blocking_write();
+    *blocking_task = Instant::now();
+    drop(blocking_task);
     SCREEN.store(destination.try_into().unwrap(), Ordering::SeqCst);
-    N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len().try_into().unwrap()), Ordering::SeqCst);
-    LETTERS.lock_mut().unwrap().clear();
+    let blocking_english = ENGLISH.blocking_read();
+    N.store(thread_rng().gen_range(0..blocking_english.len().try_into().unwrap()), Ordering::SeqCst);
+    let mut blocking_letters = LETTERS.blocking_write();
+    blocking_letters.clear();
     COLOUR.store(0, Ordering::SeqCst);
+    drop(blocking_english);
+    drop(blocking_letters);
 }
 
 fn sumbitfn() {
     //println!("{:?}",LETTERS.lock_mut().unwrap().concat());
-    
-    if format!("{}", LETTERS.lock_mut().unwrap().concat()) == VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize]{
+    let blocking_letters = LETTERS.blocking_read();
+    let blocking_vietnamese = VIETNAMESE.blocking_write();
+    if format!("{}", blocking_letters.concat()) == blocking_vietnamese[N.load(Ordering::SeqCst) as usize]{
         //println!("true");
         COLOUR.store(2, Ordering::SeqCst);
         SCREEN.store(2, Ordering::SeqCst);
@@ -228,27 +247,41 @@ fn sumbitfn() {
         COLOUR.store(1, Ordering::SeqCst);
         SCREEN.store(2, Ordering::SeqCst);
     }
+    drop(blocking_letters);
+    drop(blocking_vietnamese);
 }
 
 fn popfn() {
-    if LETTERS.lock_mut().unwrap().len() != 0 {
-        LETTERS.lock_mut().unwrap().pop();
+    let blocking_letters = LETTERS.blocking_read();
+
+    if blocking_letters.len() != 0 {
+        drop(blocking_letters);
+        let mut blocking_letters = LETTERS.blocking_write();
+
+        blocking_letters.pop();
         //println!("{}",LETTERS.lock_mut().unwrap().concat());
         COLOUR.store(0, Ordering::SeqCst);
+        drop(blocking_letters);
     } 
     
 }
 
 fn nextfn() {
-    TIME.lock_mut().unwrap().clear();
-    TIME.lock_mut().unwrap().push(Instant::now());
+    let mut blocking_letters = LETTERS.blocking_write();
+    let mut blocking_task = TIME.blocking_write();
+    *blocking_task = Instant::now();
+    drop(blocking_task);
     //println!("{}", ENGLISH.lock_mut().unwrap().len());
-    N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len().try_into().unwrap()), Ordering::SeqCst);
-    LETTERS.lock_mut().unwrap().clear();
+    let blocking_english = ENGLISH.blocking_read();
+
+    N.store(thread_rng().gen_range(0..blocking_english.len().try_into().unwrap()), Ordering::SeqCst);
+    blocking_letters.clear();
     COLOUR.store(0, Ordering::SeqCst);
+    drop(blocking_english);
+    drop(blocking_letters);
 }
 
-fn add_button<'a>(state: &'a mut button::State,content: String,message: Message) -> Button<'a, Message> {
+async fn add_button<'a>(state: &'a mut button::State,content: String,message: Message) -> Button<'a, Message> {
     return Button::new(state, body(content)).on_press(message);
 }
 
@@ -409,17 +442,21 @@ fn loaddata() {
         vietnamese.push(statement.read::<String>(1).unwrap());
         typename.push(statement.read::<String>(2).unwrap());
     }
-    
-    ENGLISH.lock_mut().unwrap().clear();
+    let mut blocking_english = ENGLISH.blocking_write();
+
+    blocking_english.clear();
     for i in english {
         //println!("{}",i);
 
-        ENGLISH.lock_mut().unwrap().push(i);
+        blocking_english.push(i);
         
     }
+    let mut blocking_vietnamese = VIETNAMESE.blocking_write();
     for i in vietnamese {
-        VIETNAMESE.lock_mut().unwrap().push(i)
+        blocking_vietnamese.push(i)
     }
+    drop(blocking_vietnamese);
+    drop(blocking_english);
 }
 fn changelang(num: usize) {
     LANG.store(num.try_into().unwrap(), Ordering::SeqCst);
@@ -432,7 +469,7 @@ fn makelang<'a>(selfx: &'a mut Buttons) -> Element<'a, Message>{
     let mut buttons: Vec<Button<Message>>=Vec::new();
     let names = loadnames();
     for i in selfx.language_states.values_mut() {
-        buttons.push(add_button(i, names[x].to_string(), Message::LangChange(x)));
+        buttons.push(block_on(add_button(i, names[x].to_string(), Message::LangChange(x))));
         x +=1;
     };
 
@@ -454,27 +491,30 @@ fn makelang<'a>(selfx: &'a mut Buttons) -> Element<'a, Message>{
 }
 
 fn savefn() {
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    let blocking_bool = SETTINGS_BOOL.blocking_read();
     let mut file = std::fs::File::create("./settings.toml").expect("create failed");
     file.write_all(format!("[settings]\n").as_bytes()).expect("write failed");
-    file.write_all(format!("seperate_check_synonyms = {} # 0\n", SETTINGS_BOOL.lock_mut().unwrap()[0]).as_bytes()).expect("write failed");
+    file.write_all(format!("seperate_check_synonyms = {} # 0\n", blocking_bool[0]).as_bytes()).expect("write failed");
     file.write_all(format!("\n").as_bytes()).expect("write failed");
     file.write_all(format!("[settings.sound]\n").as_bytes()).expect("write failed");
-    file.write_all(format!("sound =  {} # 1\n", SETTINGS_BOOL.lock_mut().unwrap()[1]).as_bytes()).expect("write failed");
-    file.write_all(format!("volume = {} # 0\n", SETTINGS_USIZE.lock_mut().unwrap()[0]).as_bytes()).expect("write failed");
+    file.write_all(format!("sound =  {} # 1\n", blocking_bool[1]).as_bytes()).expect("write failed");
+    file.write_all(format!("volume = {} # 0\n", blocking_task[0]).as_bytes()).expect("write failed");
     file.write_all(format!("\n").as_bytes()).expect("write failed");
 
     file.write_all(format!("[settings.time]\n").as_bytes()).expect("write failed");
-    file.write_all(format!("timed =  {} # 2\n", SETTINGS_BOOL.lock_mut().unwrap()[2]).as_bytes()).expect("write failed");
-    file.write_all(format!("length = {} # 1\n", SETTINGS_USIZE.lock_mut().unwrap()[1]).as_bytes()).expect("write failed");
+    file.write_all(format!("timed =  {} # 2\n", blocking_bool[2]).as_bytes()).expect("write failed");
+    file.write_all(format!("length = {} # 1\n", blocking_task[1]).as_bytes()).expect("write failed");
     file.write_all(format!("\n").as_bytes()).expect("write failed");
 
     file.write_all(format!("[settings.textsize]\n").as_bytes()).expect("write failed");
-    file.write_all(format!("h1 = {} # 2\n", SETTINGS_USIZE.lock_mut().unwrap()[2]).as_bytes()).expect("write failed");
-    file.write_all(format!("h2 = {} # 3\n", SETTINGS_USIZE.lock_mut().unwrap()[3]).as_bytes()).expect("write failed");
-    file.write_all(format!("h3 = {} # 4\n", SETTINGS_USIZE.lock_mut().unwrap()[4]).as_bytes()).expect("write failed");
-    file.write_all(format!("h4 = {} # 5\n", SETTINGS_USIZE.lock_mut().unwrap()[5]).as_bytes()).expect("write failed");
-    file.write_all(format!("body = {} # 6\n", SETTINGS_USIZE.lock_mut().unwrap()[6]).as_bytes()).expect("write failed");
+    file.write_all(format!("h1 = {} # 2\n", blocking_task[2]).as_bytes()).expect("write failed");
+    file.write_all(format!("h2 = {} # 3\n", blocking_task[3]).as_bytes()).expect("write failed");
+    file.write_all(format!("h3 = {} # 4\n", blocking_task[4]).as_bytes()).expect("write failed");
+    file.write_all(format!("h4 = {} # 5\n", blocking_task[5]).as_bytes()).expect("write failed");
+    file.write_all(format!("body = {} # 6\n", blocking_task[6]).as_bytes()).expect("write failed");
     file.write_all(format!("\n").as_bytes()).expect("write failed");
+    drop(blocking_task)
 
 }
 #[macro_export]
@@ -492,33 +532,36 @@ macro_rules! makeslider {
 }
 
 fn makesettings(selfx: &mut Buttons) -> Element<Message>{
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    let blocking_bool = SETTINGS_BOOL.blocking_read();
+
     let h2_general= h2(String::from("General Settings"));
-    let seperatecheckbox = Checkbox::new(SETTINGS_BOOL.lock_mut().unwrap()[0], "Seperately check synonyms", Message::SeperateCheckBox);
+    let seperatecheckbox = Checkbox::new(blocking_bool[0], "Seperately check synonyms", Message::SeperateCheckBox);
     let h2_sound = h2(String::from("Sound Settings"));
-    let soundbox = Checkbox::new(SETTINGS_BOOL.lock_mut().unwrap()[1], "Sound Enabled", Message::SoundBox);
-    let volumeslider = makeslider!(&mut selfx.settings.volume, 100, SETTINGS_USIZE.lock_mut().unwrap()[0], Message::VolumeSlider);
+    let soundbox = Checkbox::new(blocking_bool[1], "Sound Enabled", Message::SoundBox);
+    let volumeslider = makeslider!(&mut selfx.settings.volume, 100, blocking_task[0], Message::VolumeSlider);
     let h2_time = h2(String::from("Time Settings"));
-    let lengthbox = Checkbox::new(SETTINGS_BOOL.lock_mut().unwrap()[2], "Timed", Message::TimedBox);
-    let lengthslider = makeslider!(&mut selfx.settings.length, 1, 30, SETTINGS_USIZE.lock_mut().unwrap()[1], Message::LengthSlider);
+    let lengthbox = Checkbox::new(blocking_bool[2], "Timed", Message::TimedBox);
+    let lengthslider = makeslider!(&mut selfx.settings.length, 1, 30, blocking_task[1], Message::LengthSlider);
     let h2_text= h2(String::from("Text Settings"));
-    let h1slider = makeslider!(&mut selfx.settings.h1, 200, SETTINGS_USIZE.lock_mut().unwrap()[2], Message::H1Slider);
-    let h2slider = makeslider!(&mut selfx.settings.h2, 200, SETTINGS_USIZE.lock_mut().unwrap()[3], Message::H2Slider);
-    let h3slider = makeslider!(&mut selfx.settings.h3, 200, SETTINGS_USIZE.lock_mut().unwrap()[4], Message::H3Slider);
-    let h4slider = makeslider!(&mut selfx.settings.h4, 200, SETTINGS_USIZE.lock_mut().unwrap()[5], Message::H4Slider);
-    let bodyslider = makeslider!(&mut selfx.settings.body, 200, SETTINGS_USIZE.lock_mut().unwrap()[6], Message::BodySlider);
-    let volume = h4(String::from(format!("Volume: {}", SETTINGS_USIZE.lock_mut().unwrap()[0])));
-    let length = h4(String::from(format!("Time: {}", SETTINGS_USIZE.lock_mut().unwrap()[1])));
-    let h1 = h1(String::from(format!("H1: {}", SETTINGS_USIZE.lock_mut().unwrap()[2])));
-    let h2 = h2(String::from(format!("H2: {}", SETTINGS_USIZE.lock_mut().unwrap()[3])));
-    let h3 = h3(String::from(format!("H3: {}", SETTINGS_USIZE.lock_mut().unwrap()[4])));
-    let h4 = h4(String::from(format!("H4: {}", SETTINGS_USIZE.lock_mut().unwrap()[5])));
-    let body = body(String::from(format!("Body: {}", SETTINGS_USIZE.lock_mut().unwrap()[6])));
+    let h1slider = makeslider!(&mut selfx.settings.h1, 200, blocking_task[2], Message::H1Slider);
+    let h2slider = makeslider!(&mut selfx.settings.h2, 200, blocking_task[3], Message::H2Slider);
+    let h3slider = makeslider!(&mut selfx.settings.h3, 200, blocking_task[4], Message::H3Slider);
+    let h4slider = makeslider!(&mut selfx.settings.h4, 200, blocking_task[5], Message::H4Slider);
+    let bodyslider = makeslider!(&mut selfx.settings.body, 200, blocking_task[6], Message::BodySlider);
+    let volume = h4(String::from(format!("Volume: {}", blocking_task[0])));
+    let length = h4(String::from(format!("Time: {}", blocking_task[1])));
+    let h1 = h1(String::from(format!("H1: {}", blocking_task[2])));
+    let h2 = h2(String::from(format!("H2: {}", blocking_task[3])));
+    let h3 = h3(String::from(format!("H3: {}", blocking_task[4])));
+    let h4 = h4(String::from(format!("H4: {}", blocking_task[5])));
+    let body = body(String::from(format!("Body: {}", blocking_task[6])));
     let reset = add_button(&mut selfx.settings.load_state, String::from("Reload Default"), Message::LoadButton);
     let [state0, state1] = selfx.button_states.get_many_mut(["save", "gotomain"]).unwrap();
 
     let save = add_button(state0, String::from("Save"), Message::ButtonPressed("Save".to_string())); 
     let exit = add_button(state1, String::from("Exit"), Message::ButtonPressed("Exit".to_string()));
-    let row = Row::new().push(save).push(exit).push(reset);
+    let row = Row::new().push(block_on(save)).push(block_on(exit)).push(block_on(reset));
 
     let settingcolumn = Column::new()
         .push(h2_general)
@@ -546,6 +589,7 @@ fn makesettings(selfx: &mut Buttons) -> Element<Message>{
         .center_x()
         .center_y()
         .into();
+    drop(blocking_task);
     return main;
 }
 fn loadsize() -> usize {
@@ -579,14 +623,14 @@ fn makemain(selfx: &mut Buttons) -> Element<Message>{
 
     let mut x = 0;
 
-    let mut maincolumn = Column::new().push(settings).push(title).push(langs).push(data);
+    let mut maincolumn = Column::new().push(block_on(settings)).push(title).push(block_on(langs)).push(block_on(data));
 
     let mut buttons: Vec<Button<Message>>=Vec::new();
     let names = tablenames();
     for i in selfx.table_states.values_mut() {
         if x >= loadsize() {
         } else {
-            buttons.push(add_button(i, names[x].to_string(), Message::IndexSent(x)));
+            buttons.push(block_on(add_button(i, names[x].to_string(), Message::IndexSent(x))));
             x +=1;
         }
     };
@@ -610,22 +654,31 @@ fn makedata(selfx: &mut Buttons) -> Element<Message>{
     let n = Text::new(format!("N: {:?}", N));
     let table = Text::new(format!("table: {:?}", TABLE));
     let lang = Text::new(format!("Lang: {:?}", LANG));
-    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
+    let blocking_english = ENGLISH.blocking_read();
+
+    let english = h4(format!("{}",blocking_english[N.load(Ordering::SeqCst) as usize] ))
         .height(Length::Units(60));
-    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
+
+    let blocking_vietnamese = VIETNAMESE.blocking_read();
+
+    let vietnamese = h4(format!("{}",blocking_vietnamese[N.load(Ordering::SeqCst) as usize] ))
         .height(Length::Units(60));
+    drop(blocking_vietnamese);
     let maincolumn = Column::new().push(n).push(table).push(lang).push(english).push(vietnamese);
     let exit = add_button(state, "exit".to_string(), Message::ButtonPressed("Exit".to_string()));
-    let main: Element<Message> = Container::new(maincolumn.push(exit))
+    let main: Element<Message> = Container::new(maincolumn.push(block_on(exit)))
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
         .center_x()
         .center_y()
         .into();
+    drop(blocking_english);
     return main;
 }
 fn makereview(selfx: &mut Buttons) -> Element<Message>{
+    let blocking_english = ENGLISH.blocking_read();
+
     let [state0, state1] = selfx.button_states.get_many_mut(["gotomain", "gototesting"]).unwrap();
 
     let exit = add_button(state0, String::from("Exit"), Message::ButtonPressed("Exit".to_string()));
@@ -643,40 +696,85 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
     let subtitle3 = h3(String::from("English"))
         .horizontal_alignment(alignment::Horizontal::Center)
         .width(Length::Fill);
-    
-    let response = h4(format!("{}", LETTERS.lock_mut().unwrap().concat()))
+
+    let blocking_letters = LETTERS.blocking_read();
+
+    let response = h4(format!("{}", blocking_letters.concat()))
         .height(Length::Units(60))
         .color(colours[COLOUR.load(Ordering::SeqCst) as usize]);
-    let english = h4(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
-        .height(Length::Units(60));
-    let vietnamese = h4(format!("{}",VIETNAMESE.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
+    let english = h4(format!("{}",blocking_english[N.load(Ordering::SeqCst) as usize] ))
         .height(Length::Units(60));
 
+    let blocking_vietnamese = VIETNAMESE.blocking_read();
+
+    let vietnamese = h4(format!("{}",blocking_vietnamese[N.load(Ordering::SeqCst) as usize] ))
+        .height(Length::Units(60));
+    drop(blocking_vietnamese);
+
     let resume = add_button(state1, String::from("Resume"), Message::ButtonPressed("Resume".to_string()));
-    let column = Column::new().push(exit).push(subtitle1).push(response).push(subtitle2).push(vietnamese).push(subtitle3).push(english).push(resume);
+    let column = Column::new()
+        .push(block_on(exit))
+        .push(subtitle1)
+        .push(response)
+        .push(subtitle2)
+        .push(vietnamese)
+        .push(subtitle3)
+        .push(english)
+        .push(block_on(resume));
     let review: Element<Message> = Container::new(column)
         .padding(100)
         .width(Length::Fill)
         .height(Length::Fill)
         .center_x()
         .into();
+
+    drop(blocking_english);
+    drop(blocking_letters);
     return review;
 }
 
+async fn get_time() -> String {
+    // Borrow values from RwLock instead of cloning them
+    let settings = SETTINGS_USIZE.read().await;
+    let time = TIME.read().await;
+
+    // Cache elapsed time value in a local variable
+    let elapsed = time.elapsed().as_secs_f32();
+
+    // Calculate and return result
+    let new_time = settings[1] as f32 - elapsed;
+    format!("{:.2}", new_time)
+}
+
+fn write_rwlock_usize(index: usize, num: i32) {
+    let mut blocking_task = SETTINGS_USIZE.blocking_write();
+    blocking_task[index] = num as usize;
+    drop(blocking_task);
+}
+fn write_rwlock_bool(index: usize, bool: bool) {
+    let mut blocking_task = SETTINGS_BOOL.blocking_write();
+    blocking_task[index] = bool;
+    drop(blocking_task);
+}
+
 fn makelevel(selfx: &mut Buttons) -> Element<Message>{
-    let timer = h4(
-        format!("{:.2}",  
-        (SETTINGS_USIZE.lock_mut().unwrap()[1] as f64 - TIME.lock_mut().unwrap()[0].elapsed().as_secs_f64()))
-    );
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    let blocking_task_two = TIME.blocking_read();
+    let blocking_letters = LETTERS.blocking_read();
+    let blocking_english = ENGLISH.blocking_read();
+
+    let timer = h4(block_on(get_time()));
     
-    if TIME.lock_mut().unwrap()[0].elapsed().as_secs() >= SETTINGS_USIZE.lock_mut().unwrap()[1] as u64 {
+    if blocking_task_two.elapsed().as_secs() >= blocking_task[1] as u64 {
         sumbitfn()
     }
-    let english = h2(format!("{}",ENGLISH.lock_mut().unwrap()[N.load(Ordering::SeqCst) as usize] ))
+
+
+    let english = h2(format!("{}",blocking_english[N.load(Ordering::SeqCst) as usize] ))
     .height(Length::Units(150));
     
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];
-    let text1 = h2(format!("{}", LETTERS.lock_mut().unwrap().concat()))
+    let text1 = h2(format!("{}", blocking_letters.concat()))
     .height(Length::Units(150))
     .color(colours[COLOUR.load(Ordering::SeqCst) as usize]);
     let buttonnames = ["gotomain","shift","submit", "space", "delete","next"];
@@ -695,21 +793,21 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     let list = selfx.lang_one_states.get_many_mut(LANGONE).unwrap();
     
     for i in list{
-        buttonone.push(add_button(i, shiftfn(LANGONE[x].to_string()),Message::LetterPressed(LANGONE[x].to_string())));
+        buttonone.push(block_on(add_button(i, shiftfn(LANGONE[x].to_string()),Message::LetterPressed(LANGONE[x].to_string()))));
         x+=1;
     } 
     x=0;
     let mut buttontwo: Vec<Button<Message>> = Vec::new();
     let list = selfx.lang_two_states.get_many_mut(LANGTWO).unwrap();
     for i in list{
-        buttontwo.push(add_button(i, shiftfn(LANGTWO[x].to_string()),Message::LetterPressed(LANGTWO[x].to_string())));
+        buttontwo.push(block_on(add_button(i, shiftfn(LANGTWO[x].to_string()),Message::LetterPressed(LANGTWO[x].to_string()))));
         x+=1;
     }
     x=0;
     let mut buttons: Vec<Button<Message>> = Vec::new();
     let list = selfx.punctuation_states.get_many_mut(PUNCTUATION).unwrap();
     for i in list{
-        buttons.push(add_button(i, PUNCTUATION[x].to_string(),Message::LetterPressed(PUNCTUATION[x].to_string())));
+        buttons.push(block_on(add_button(i, PUNCTUATION[x].to_string(),Message::LetterPressed(PUNCTUATION[x].to_string()))));
         x+=1;
     }
 
@@ -721,7 +819,12 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     let next = add_button(state5, String::from("next"), Message::ButtonPressed("Next".to_string()));
 
     let mut userrow = Row::new();
-    userrow = userrow.push(submit).push(space).push(delete).push(next).push(shift);
+    userrow = userrow
+    .push(block_on(submit))
+    .push(block_on(space))
+    .push(block_on(delete))
+    .push(block_on(next))
+    .push(block_on(shift));
 
 
     let mut row1 = Row::new();
@@ -736,7 +839,7 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     for button in buttons {
         row3 = row3.push(button);
     };
-    let utilrow = Row::new().push(timer).push(exit);
+    let utilrow = Row::new().push(timer).push(block_on(exit));
     let column1 = Column::new().push(utilrow.width(Length::Fill)).push(english).push(text1).push(userrow).push(row1).push(row2).push(row3).width(Length::Fill).align_items(iced::Alignment::Center);
     let testing: Element<Message> = Container::new(column1)
         .padding(100)
@@ -745,6 +848,10 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
         .center_x()
         .center_y()
         .into();
+    drop(blocking_task);
+    drop(blocking_task_two);
+    drop(blocking_english);
+    drop(blocking_letters);
     return testing;
 }
 impl Application for Buttons {
@@ -812,16 +919,16 @@ impl Application for Buttons {
             },
             
             
-            Message::SeperateCheckBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[0] = state,
-            Message::SoundBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[1] = state,
-            Message::TimedBox(state) => SETTINGS_BOOL.lock_mut().unwrap()[2] = state,
-            Message::VolumeSlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[0] = num as usize,
-            Message::LengthSlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[1] = num as usize,
-            Message::H1Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[2] = num as usize,
-            Message::H2Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[3] = num as usize,
-            Message::H3Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[4] = num as usize,
-            Message::H4Slider(num) => SETTINGS_USIZE.lock_mut().unwrap()[5] = num as usize,
-            Message::BodySlider(num) => SETTINGS_USIZE.lock_mut().unwrap()[6] = num as usize,
+            Message::SeperateCheckBox(state) => write_rwlock_bool(0, state),
+            Message::SoundBox(state) => write_rwlock_bool(1, state),
+            Message::TimedBox(state) => write_rwlock_bool(2, state),
+            Message::VolumeSlider(num) => write_rwlock_usize(0, num),
+            Message::LengthSlider(num) => write_rwlock_usize(1, num),
+            Message::H1Slider(num) => write_rwlock_usize(2, num),
+            Message::H2Slider(num) => write_rwlock_usize(3, num),
+            Message::H3Slider(num) => write_rwlock_usize(4, num),
+            Message::H4Slider(num) => write_rwlock_usize(5, num),
+            Message::BodySlider(num) => write_rwlock_usize(6, num),
  
         };
 
@@ -845,9 +952,11 @@ impl Application for Buttons {
 fn loadsettings() {
     let filename = "./settings.toml";
     let contents = fs::read_to_string(filename).unwrap();
-
-    SETTINGS_BOOL.lock_mut().unwrap().clear();
-    SETTINGS_USIZE.lock_mut().unwrap().clear();
+    let mut blocking_bool = SETTINGS_BOOL.blocking_write();
+    blocking_bool.clear();
+    let mut blocking_task = SETTINGS_USIZE.blocking_write();
+    blocking_task.clear();
+    
     let data: Data = toml::from_str(&contents).unwrap();
     let boollist = 
     [
@@ -856,7 +965,7 @@ fn loadsettings() {
         data.settings.time.timed
     ];
     for i in boollist {
-        SETTINGS_BOOL.lock_mut().unwrap().push(i);
+        blocking_bool.push(i);
     }
     let usizelist = 
     [
@@ -870,24 +979,32 @@ fn loadsettings() {
 
     ];
     for i in usizelist {
-        SETTINGS_USIZE.lock_mut().unwrap().push(i);
+        blocking_task.push(i);
     }
+    drop(blocking_task);
+    drop(blocking_bool);
 
 }
 fn h1(text: String) -> Text {
-    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[2] as u16);
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    return Text::new(text).size(blocking_task[2] as u16);
+    
 }
 fn h2(text: String) -> Text {
-    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[3] as u16);
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    return Text::new(text).size(blocking_task[3] as u16);
 }
 fn h3(text: String) -> Text {
-    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[4] as u16);
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    return Text::new(text).size(blocking_task[4] as u16);
 }
 fn h4(text: String) -> Text {
-    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[5] as u16);
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    return Text::new(text).size(blocking_task[5] as u16);
 }
 fn body(text: String) -> Text {
-    return Text::new(text).size(SETTINGS_USIZE.lock_mut().unwrap()[6] as u16);
+    let blocking_task = SETTINGS_USIZE.blocking_read();
+    return Text::new(text).size(blocking_task[6] as u16);
 }
 
 fn main() -> iced::Result {
@@ -895,9 +1012,12 @@ fn main() -> iced::Result {
     loadsizes();
     let rgba = vec![0, 0, 0, 255];
     loaddata();
-    N.store(thread_rng().gen_range(0..ENGLISH.lock_mut().unwrap().len()).try_into().unwrap(), Ordering::SeqCst);
-    TIME.lock_mut().unwrap().push(Instant::now());
-
+    let blocking_english = ENGLISH.blocking_read();
+    N.store(thread_rng().gen_range(0..blocking_english.len()).try_into().unwrap(), Ordering::SeqCst);
+    drop(blocking_english);
+    let mut blocking_task = TIME.blocking_write();
+    *blocking_task = Instant::now();
+    drop(blocking_task);
     let setting: IcedSettings<()> = IcedSettings {
         window: window::Settings {
             size: (800, 600),
