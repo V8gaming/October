@@ -33,10 +33,12 @@ cargo run --bin generator; cargo run --bin generated
 - [x] Review Page
 - [ ] Compile for mac and linux
 - [ ] Check for both meanings seperated by a semicolon, or check for either (requires settings)
+- [ ] allow multiple database types [sqlite3, sqlite]
+- [ ] add tests for Message Matching
 
 ## Future
 
-- [x] *do this without generator, for hot loading of languages.
+- [ ] hot loading of languages.
 - [x] Compile without generator
 - [ ] No Vecs
 - [ ] No unwraps

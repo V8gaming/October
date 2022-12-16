@@ -65,6 +65,7 @@ struct Buttons {
     lang_one_states: HashMap<&'static str, button::State>,
     lang_two_states: HashMap<&'static str, button::State>,
     punctuation_states: HashMap<&'static str, button::State>,
+    language_states: HashMap<String, button::State>,
     table_states: HashMap<String, button::State>,
     settings: SettingButtons,
 }
@@ -78,7 +79,7 @@ impl Default for Buttons {
                 let list = [
                     "gotomain", "gototesting","gotolang","gotosetting", "gotodata", 
                     "shift", "next", "submit", "space", "delete", 
-                    "save", "lang_state0", "lang_state1"
+                    "save"
                 ];
                 for i in list{
                     map.insert(i,button::State::default());
@@ -123,6 +124,18 @@ impl Default for Buttons {
                 map
                     
             },
+            language_states: {
+                let mut map = HashMap::new();
+                let mut vec = Vec::new();
+                for i in 0..loadamount() {
+                    vec.push(format!("state{}",i));
+                }
+                for i in vec {
+                    map.insert(i, button::State::default());
+                }
+                map
+                    
+            },
             table_states: {
                 let mut map = HashMap::new();
                 let mut vec = Vec::new();
@@ -156,6 +169,7 @@ struct SettingButtons {
 enum Message {
     EventOccurred(iced_native::Event),
     ButtonPressed(String),
+    LangChange(usize),
     IndexSent(usize),
     LetterPressed(String),
     SeperateCheckBox(bool),
@@ -317,6 +331,51 @@ fn loadsizes() {
     MAXSTATES.store(*templangvec.iter().max().unwrap(), Ordering::SeqCst)
 }
 
+fn loadnames() -> Vec<String> {
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        //println!("{}", file.unwrap().path().display());
+        languages.push
+        (
+            file
+            .unwrap()
+            .path()
+            .display()
+            .to_string()
+            .strip_prefix("./resources/languages/").unwrap()
+            .strip_suffix(".sqlite3").unwrap()
+            .to_string()
+        )
+    }
+    // for i in languages {
+    //     println!("{}",i.strip_prefix("./resources/languages/").unwrap().strip_suffix(".sqlite3").unwrap())
+    // }
+    return languages;
+
+}
+fn loadamount() -> usize {
+    let mut languages: Vec<String> = Vec::new();
+    for file in fs::read_dir("./resources/languages/").unwrap() {
+        //println!("{}", file.unwrap().path().display());
+        languages.push
+        (
+            file
+            .unwrap()
+            .path()
+            .display()
+            .to_string()
+            .strip_prefix("./resources/languages/").unwrap()
+            .strip_suffix(".sqlite3").unwrap()
+            .to_string()
+        )
+    }
+    // for i in languages {
+    //     println!("{}",i.strip_prefix("./resources/languages/").unwrap().strip_suffix(".sqlite3").unwrap())
+    // }
+    return languages.len();
+
+}
+
 
 fn loaddata() {
     let mut languages: Vec<String> = Vec::new();
@@ -369,13 +428,21 @@ fn changelang(num: usize) {
 }
 
 fn makelang<'a>(selfx: &'a mut Buttons) -> Element<'a, Message>{
-    let [state0, state1] = selfx.button_states.get_many_mut(["lang_state0", "lang_state1"]).unwrap();
-    let lang0 = add_button(state0, String::from("Lang0"), Message::ButtonPressed("Lang0".to_string()));
-    let lang1 = add_button(state1, String::from("Lang1"), Message::ButtonPressed("Lang1".to_string()));
+    let mut x = 0;
+    let mut buttons: Vec<Button<Message>>=Vec::new();
+    let names = loadnames();
+    for i in selfx.language_states.values_mut() {
+        buttons.push(add_button(i, names[x].to_string(), Message::LangChange(x)));
+        x +=1;
+    };
 
 /*     let lang0 = add_button(selfx.button_states.get_mut("lang_state0").unwrap(), String::from("Lang0"), Message::LangButton0);
     let lang1 = add_button(selfx.button_states.get_mut("lang_state1").unwrap(), String::from("Lang1"), Message::LangButton1);
- */    let langcolumn = Column::new().push(lang0).push(lang1);
+ */    
+    let mut langcolumn = Column::new();
+    for i in buttons {
+        langcolumn = langcolumn.push(i);
+    }
     let main: Element<'a, Message> = Container::new(langcolumn)
         .padding(100)
         .width(Length::Fill)
@@ -628,14 +695,14 @@ fn makelevel(selfx: &mut Buttons) -> Element<Message>{
     let list = selfx.lang_one_states.get_many_mut(LANGONE).unwrap();
     
     for i in list{
-        buttonone.push(add_button(i, LANGONE[x].to_string(),Message::LetterPressed(LANGONE[x].to_string())));
+        buttonone.push(add_button(i, shiftfn(LANGONE[x].to_string()),Message::LetterPressed(LANGONE[x].to_string())));
         x+=1;
     } 
     x=0;
     let mut buttontwo: Vec<Button<Message>> = Vec::new();
     let list = selfx.lang_two_states.get_many_mut(LANGTWO).unwrap();
     for i in list{
-        buttontwo.push(add_button(i, LANGTWO[x].to_string(),Message::LetterPressed(LANGTWO[x].to_string())));
+        buttontwo.push(add_button(i, shiftfn(LANGTWO[x].to_string()),Message::LetterPressed(LANGTWO[x].to_string())));
         x+=1;
     }
     x=0;
@@ -703,13 +770,11 @@ impl Application for Buttons {
             Message::IndexSent(usize) => {
                 index(usize)
             }
+            Message::LangChange(usize) => {
+                changelang(usize)
+            }
             Message::ButtonPressed(string) => {
                 match string.as_str() {
-                    "Basic" => index(0),
-                    "Intermediate" => index(1),
-                    "Advanced" => index(2),
-                    "Lang0" => changelang(0),
-                    "Lang1" => changelang(1),
                     "Save" => savefn(),
                     "Exit" => shiftscreenfn(0),
                     "Settings" => shiftscreenfn(4),
