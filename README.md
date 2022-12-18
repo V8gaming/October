@@ -5,7 +5,7 @@ A language learning app written in rust. Only testing memory for now.
 ## Usage
 
 ```powershell
-cargo run --bin generator; cargo run --bin generated
+cargo run --release
 ```
 
 ## Todo

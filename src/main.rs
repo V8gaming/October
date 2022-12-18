@@ -2,6 +2,8 @@
 use std::{
     fs, io::Write, 
     time::Instant,
+    time::Duration,
+    thread,
     collections::HashMap,
     convert::TryInto,
     sync::atomic::{AtomicU32, Ordering},
@@ -32,13 +34,6 @@ use tokio::sync::RwLock;
 // Global variables for storing the letters to be typed, the English and Vietnamese words,
 // and other program state such as the current screen, language, and time.
 
-//static LETTERS: Global<Vec<String>> = Global::new();
-//static ENGLISH: Global<Vec<String>> = Global::new();
-//static VIETNAMESE: Global<Vec<String>> = Global::new();
-//static SETTINGS_USIZE: Global<Vec<usize>> = Global::new();
-//static SETTINGS_BOOL: Global<Vec<bool>> = Global::new();
-//static TIME: Global<Vec<Instant>> = Global::new();
-
 lazy_static! {
     static ref LETTERS: RwLock<Vec<String>> = RwLock::new(Vec::new());
     static ref ENGLISH: RwLock<Vec<String>> = RwLock::new(Vec::new());
@@ -68,7 +63,7 @@ const PUNCTUATION: [&str;8] = ["(",")", ";", ":", ",", ".", "?", "!"];
 
 mod settings;
 
-use settings::{Data};
+use settings::Data;
 
 
 struct Buttons {
@@ -937,6 +932,8 @@ impl Application for Buttons {
     }
 
     fn view(&mut self) -> Element<Message> {
+        let ten_millis = Duration::from_millis(1);
+        thread::sleep(ten_millis);
         match SCREEN.load(Ordering::SeqCst) {
             0 => makemain(self),
             1 => makelevel(self),
@@ -1042,4 +1039,3 @@ fn main() -> iced::Result {
     Buttons::run(setting)
 
 }
-
