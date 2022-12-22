@@ -2,8 +2,6 @@
 use std::{
     fs, io::Write, 
     time::Instant,
-    time::Duration,
-    thread,
     collections::HashMap,
     convert::TryInto,
     sync::atomic::{AtomicU32, Ordering},
@@ -29,8 +27,6 @@ use iced_native::{Event, keyboard};
 use sqlite::State as SqlState;
 use toml::{self};
 use tokio::sync::RwLock;
-
-
 // Global variables for storing the letters to be typed, the English and Vietnamese words,
 // and other program state such as the current screen, language, and time.
 
@@ -75,7 +71,6 @@ struct Buttons {
     table_states: HashMap<String, button::State>,
     settings: SettingButtons,
 }
-
 impl Default for Buttons {
     fn default() -> Self {
         Self {
@@ -729,6 +724,7 @@ fn makereview(selfx: &mut Buttons) -> Element<Message>{
 }
 
 async fn get_time() -> String {
+
     // Borrow values from RwLock instead of cloning them
     let settings = SETTINGS_USIZE.read().await;
     let time = TIME.read().await;
@@ -859,7 +855,7 @@ impl Application for Buttons {
     }
 
     fn new(_flags: ()) -> (Buttons, Command<Message>) {
-        (Buttons::default(), Command::none())
+        return (Buttons::default(), Command::none());
     }
 
     fn title(&self) -> String {
@@ -932,8 +928,6 @@ impl Application for Buttons {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let ten_millis = Duration::from_millis(1);
-        thread::sleep(ten_millis);
         match SCREEN.load(Ordering::SeqCst) {
             0 => makemain(self),
             1 => makelevel(self),
