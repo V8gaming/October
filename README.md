@@ -35,6 +35,7 @@ cargo run --release
 - [ ] Check for both meanings seperated by a semicolon, or check for either (requires settings)
 - [ ] allow multiple database types [sqlite3, sqlite]
 - [ ] add tests for Message Matching
+- [ ] change loadsettings to a hashmap
 
 ## Future
 

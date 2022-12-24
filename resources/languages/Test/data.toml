@@ -1,0 +1,13 @@
+[metadata]
+author = 'eriinnye'
+description = 'Advice for beginners: Ignore words/sentences that seem too complicated and come back for them later! Have fun learning!'
+link = 'tinyurl.com/MemriseViet'
+last_update = 2021-01-02
+email = 'eriinnye@gmx.de'
+[language]
+
+[language.first]
+alphabet = "english"
+
+[language.second]
+alphabet = "vietnamese"
