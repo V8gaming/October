@@ -1,4 +1,4 @@
-use crate::Mainstruct;
+use crate::{Mainstruct, load::{loadalphabet, loadlangsettings, loadhashmaps}};
 use std::time::Instant;
 use rand::{Rng, thread_rng};
 use sqlite::State as SqlState;
@@ -42,6 +42,9 @@ pub fn index(selfx: &mut Mainstruct, num: usize) {
     }
 }
 pub fn changelang(selfx: &mut Mainstruct, num: usize) {
+    loadlangsettings(selfx);
+    loadalphabet(selfx);
+    loadhashmaps(selfx);
     selfx.lang = num;
     selfx.table = 0;
     shiftscreenfn(selfx, 0);

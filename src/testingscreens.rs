@@ -32,24 +32,21 @@ pub fn reviewscreen(selfx: &mut Mainstruct) -> Element<Message>{
     let mut buttonone: Vec<Button<Message>> = Vec::new();
     let mut x = 0;
     //let list: [&mut State; 26];
-
-    let list = selfx.lang_one_states.get_many_mut(selfx.langone).unwrap();
     
-    for i in list{
+    for i in selfx.lang_one_states.values_mut() {
         buttonone.push(block_on(add_button(i, shiftfn(selfx.shift, selfx.langone[x].to_string()),Message::LetterPressed(selfx.langone[x].to_string()), selfx.settings_usize[6])));
         x+=1;
-    } 
+    }
+
     x=0;
     let mut buttontwo: Vec<Button<Message>> = Vec::new();
-    let list = selfx.lang_two_states.get_many_mut(selfx.langtwo).unwrap();
-    for i in list{
+    for i in selfx.lang_two_states.values_mut(){
         buttontwo.push(block_on(add_button(i, shiftfn(selfx.shift,selfx.langtwo[x].to_string()),Message::LetterPressed(selfx.langtwo[x].to_string()), selfx.settings_usize[6])));
         x+=1;
     }
     x=0;
     let mut buttons: Vec<Button<Message>> = Vec::new();
-    let list = selfx.punctuation_states.get_many_mut(selfx.punctuation).unwrap();
-    for i in list{
+    for i in selfx.punctuation_states.values_mut(){
         buttons.push(block_on(add_button(i, selfx.punctuation[x].to_string(),Message::LetterPressed(selfx.punctuation[x].to_string()), selfx.settings_usize[6])));
         x+=1;
     }
