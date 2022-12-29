@@ -10,6 +10,7 @@ cargo run --release
 
 ## Todo
 
+- [ ] language loading broken
 - [x] Convert Sandbox to Application
 - [x] Keypresses
 - [x] Timer

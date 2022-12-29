@@ -48,8 +48,8 @@ pub struct Mainstruct {
     pub letters: Vec<String>,
     pub english: Vec<String>,
     pub vietnamese: Vec<String>,
-    pub langone: [&'static str; 26],
-    pub langtwo: [&'static str; 33],
+    pub langone: Vec<&'static str>,
+    pub langtwo: Vec<&'static str>,
     pub punctuation: [&'static str; 8],
     pub time: Instant,
     pub screen: u32,
@@ -107,17 +107,10 @@ impl Default for Mainstruct {
                 Instant::now()
             },
             langone: {
-                ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+                Vec::new()
             },
             langtwo: {
-                [
-                    "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
-                    "đ",
-                    "ỏ","ơ","ờ","ồ","ó","ô","ọ","ộ","ớ","ở",
-                    "ư","ụ","ữ","ú", "ủ",
-                    "í","ì","ị",
-                    "ế","ẹ", "ể", "ề"
-                ]
+                Vec::new()
             },
             punctuation: {
                 ["(",")", ";", ":", ",", ".", "?", "!"]
@@ -174,13 +167,6 @@ impl Default for Mainstruct {
             },
             language_states: {
                 let mut map = HashMap::new();
-                let mut vec = Vec::new();
-                for i in 0..loadamount() {
-                    vec.push(format!("state{}",i));
-                }
-                for i in vec {
-                    map.insert(i, button::State::default());
-                }
                 map
                     
             },
