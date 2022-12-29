@@ -10,6 +10,7 @@ pub fn langscreen<'a>(selfx: &'a mut Mainstruct) -> Element<'a, Message>{
     let mut buttons: Vec<Button<Message>>=Vec::new();
     let names = loadnames();
     for i in selfx.language_states.values_mut() {
+        //println!("lang: {} = {}", x, names[x]);
         buttons.push(block_on(add_button(i, names[x].to_string(), Message::LangChange(x), selfx.settings_usize[6])));
         x +=1;
     };

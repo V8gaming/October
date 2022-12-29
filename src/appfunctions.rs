@@ -42,11 +42,12 @@ pub fn index(selfx: &mut Mainstruct, num: usize) {
     }
 }
 pub fn changelang(selfx: &mut Mainstruct, num: usize) {
+    selfx.lang = num;
+    selfx.table = 0;
     loadlangsettings(selfx);
     loadalphabet(selfx);
     loadhashmaps(selfx);
-    selfx.lang = num;
-    selfx.table = 0;
+
     shiftscreenfn(selfx, 0);
     loaddata(selfx);
 }

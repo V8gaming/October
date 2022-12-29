@@ -8,9 +8,10 @@ A language learning app written in rust. Only testing memory for now.
 cargo run --release
 ```
 
+## Language Config
+alphabet options are: "english", "vietnamese", "greek", and "cyrillic".
 ## Todo
 
-- [ ] language loading broken
 - [x] Convert Sandbox to Application
 - [x] Keypresses
 - [x] Timer
@@ -27,7 +28,7 @@ cargo run --release
   - [x] Volume
   - [x] Timed
   - [x] length of timer
-- [ ] languages as folder(database, settings.toml)
+- [x] languages as folder(database, settings.toml)
 - [x] Title in main page, and selected language.
 - [ ] Add comments to code.
 - [ ] red theme

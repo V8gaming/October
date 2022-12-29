@@ -27,10 +27,10 @@ pub fn reviewscreen(selfx: &mut Mainstruct) -> Element<Message>{
     let response = h4(selfx.settings_usize[5],format!("{}", selfx.letters.concat()))
         .height(Length::Units(60))
         .color(colours[selfx.colour as usize]);
-    let english = h4(selfx.settings_usize[5],format!("{}",selfx.english[selfx.word_index] ))
+    let langone = h4(selfx.settings_usize[5],format!("{}",selfx.english[selfx.word_index] ))
         .height(Length::Units(60));
 
-    let vietnamese = h4(selfx.settings_usize[5],format!("{}",selfx.vietnamese[selfx.word_index] ))
+    let langtwo = h4(selfx.settings_usize[5],format!("{}",selfx.vietnamese[selfx.word_index] ))
         .height(Length::Units(60));
 
     let resume = add_button(state1, String::from("Resume"), Message::ButtonPressed("Resume".to_string()), selfx.settings_usize[6]);
@@ -39,9 +39,9 @@ pub fn reviewscreen(selfx: &mut Mainstruct) -> Element<Message>{
         .push(subtitle1)
         .push(response)
         .push(subtitle2)
-        .push(vietnamese)
+        .push(langtwo)
         .push(subtitle3)
-        .push(english)
+        .push(langone)
         .push(block_on(resume));
     let review: Element<Message> = Container::new(column)
         .padding(100)

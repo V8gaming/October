@@ -36,11 +36,11 @@ pub fn read_languages_dir() -> Vec<Vec<String>> {
 pub fn loadamount() -> usize {
     let languages = read_languages_dir();
 
-    let mut x = 0;
+/*     let mut x = 0;
     for i in &languages {
         println!("{} = {}", x, i[0]);
         x+=1;
-    }
+    } */
     // Return the length of the list of languages
     languages.len()
 
@@ -56,19 +56,24 @@ pub fn loadalphabet(selfx: &mut Mainstruct){
         "ế","ẹ", "ể", "ề"
     ];
     let greek = vec!["α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", "σ", "ς", "ϲ", "τ", "υ", "φ", "χ", "ψ", "ω"];
+    let cyrillic = vec!["а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"];
+    
+    
     let alphabet: &str = selfx.settings_language.get("lang one alphabet").unwrap();
     match alphabet {
         "english" => selfx.langone = english.clone(),
         "vietnamese" => selfx.langone = vietnamese.clone(),
         "greek" => selfx.langone = greek.clone(),
-        _ => return selfx.langone = english,
+        "cyrillic" => selfx.langone = cyrillic.clone(),
+        _ => selfx.langone = english.clone(),
     }
     let alphabet: &str = selfx.settings_language.get("lang two alphabet").unwrap();
     match alphabet {
         "english" => selfx.langtwo = english,
         "vietnamese" => selfx.langtwo = vietnamese,
         "greek" => selfx.langtwo = greek,
-        _ => return selfx.langtwo = english,
+        "cyrillic" => selfx.langone = cyrillic.clone(),
+        _ => selfx.langtwo = english,
     }
     
 }
@@ -125,26 +130,27 @@ pub fn loaddata(selfx: &mut Mainstruct) {
         .prepare(format!("SELECT * FROM {}", tables[selfx.table]))
         .unwrap();
 
-    let mut vietnamese: Vec<String> = Vec::new();
-    let mut english: Vec<String> = Vec::new();
+    let mut langtwo: Vec<String> = Vec::new();
+    let mut langone: Vec<String> = Vec::new();
     let mut typename: Vec<String> = Vec::new();
 
     while let Ok(SqlState::Row) = statement.next() {
         //println!("{} = {}", statement.read::<String>(0).unwrap(), statement.read::<String>(1).unwrap());
         //println!("{}",statement.read::<String>(0).unwrap());
-        english.push(statement.read::<String>(0).unwrap());
-        vietnamese.push(statement.read::<String>(1).unwrap());
+        langone.push(statement.read::<String>(0).unwrap());
+        langtwo.push(statement.read::<String>(1).unwrap());
         typename.push(statement.read::<String>(2).unwrap());
     }
 
     selfx.english.clear();
-    for i in english {
+    selfx.vietnamese.clear();
+    for i in langone {
         //println!("{}",i);
 
         selfx.english.push(i);
         
     }
-    for i in vietnamese {
+    for i in langtwo {
         selfx.vietnamese.push(i)
     }
 }

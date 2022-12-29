@@ -4,7 +4,6 @@ use serde_derive::Deserialize;
 use std::time::Instant;
 use iced::{button, slider, scrollable};
 
-use crate::load::loadamount;
 
 #[derive(Deserialize, Debug)]
 pub struct Data {
@@ -166,7 +165,7 @@ impl Default for Mainstruct {
                 map
             },
             language_states: {
-                let mut map = HashMap::new();
+                let map = HashMap::new();
                 map
                     
             },
