@@ -1,5 +1,6 @@
 use crate::Mainstruct;
 use crate::Message;
+use crate::appfunctions::initalise;
 use crate::load::{loadsettings, loadsizes, loadhashmaps, loaddata, loadsize, tablenames};
 use crate::elements::add_button;
 use crate::basic::h1;
@@ -8,6 +9,7 @@ use futures::executor::block_on;
 use rand::{thread_rng, Rng};
 
 pub fn mainscreen(selfx: &mut Mainstruct) -> Element<Message>{
+    initalise(selfx);
     loadsettings(selfx);
     loadsizes(selfx);
     loadhashmaps(selfx);

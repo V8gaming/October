@@ -25,7 +25,6 @@ mod datascreen;
 mod reviewscreen;
 mod appfunctions;
 mod elements;
-mod traits;
 
 use structs::{Data, Mainstruct};
 use types::{Executor, Message, Flags};
@@ -37,7 +36,7 @@ use datascreen::datascreen;
 use langscreen::langscreen;
 use reviewscreen::reviewscreen;
 use text::{shiftvaluefn, pushfn, popfn};
-use appfunctions::{shiftscreenfn, index, changelang, sumbitfn, nextfn, initalise};
+use appfunctions::{shiftscreenfn, index, changelang, sumbitfn, nextfn};
 use file::savefn;
 
 impl Application for Mainstruct {
@@ -49,8 +48,7 @@ impl Application for Mainstruct {
         iced_native::subscription::events().map(Message::EventOccurred)
     }
 
-    fn new(self, _flags: ()) -> (Mainstruct, Command<Message>) {
-        initalise(self);
+    fn new(_flags: ()) -> (Mainstruct, Command<Message>) {
         return (Mainstruct::default(), Command::none());
     }
 
