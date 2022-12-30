@@ -142,16 +142,16 @@ pub fn loaddata(selfx: &mut Mainstruct) {
         typename.push(statement.read::<String>(2).unwrap());
     }
 
-    selfx.english.clear();
-    selfx.vietnamese.clear();
+    selfx.langonevec.clear();
+    selfx.langtwovec.clear();
     for i in langone {
         //println!("{}",i);
 
-        selfx.english.push(i);
+        selfx.langonevec.push(i);
         
     }
     for i in langtwo {
-        selfx.vietnamese.push(i)
+        selfx.langtwovec.push(i)
     }
 }
 

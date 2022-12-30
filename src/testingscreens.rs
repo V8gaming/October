@@ -13,7 +13,7 @@ pub fn reviewscreen(selfx: &mut Mainstruct) -> Element<Message>{
     }
 
 
-    let english = h2(selfx.settings_usize[3],format!("{}",selfx.english[selfx.word_index] ))
+    let english = h2(selfx.settings_usize[3],format!("{}",selfx.langonevec[selfx.word_index] ))
     .height(Length::Units(150));
     
     let colours = vec![Color::BLACK,Color::from_rgb(1.0, 0.0, 0.0),Color::from_rgb(0.0, 1.0, 0.0)];

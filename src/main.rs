@@ -25,10 +25,11 @@ mod datascreen;
 mod reviewscreen;
 mod appfunctions;
 mod elements;
+mod traits;
 
 use structs::{Data, Mainstruct};
 use types::{Executor, Message, Flags};
-use load::loadsettings;
+use load::{loadsettings};
 use testingscreens::reviewscreen as review;
 use settingscreen::settingscreen;
 use mainscreen::mainscreen;
@@ -36,18 +37,20 @@ use datascreen::datascreen;
 use langscreen::langscreen;
 use reviewscreen::reviewscreen;
 use text::{shiftvaluefn, pushfn, popfn};
-use appfunctions::{shiftscreenfn, index, changelang, sumbitfn, nextfn};
+use appfunctions::{shiftscreenfn, index, changelang, sumbitfn, nextfn, initalise};
 use file::savefn;
 
 impl Application for Mainstruct {
     type Executor = Executor;
     type Message = Message;
     type Flags = Flags;
+    
     fn subscription(&self) -> Subscription<Message> {
         iced_native::subscription::events().map(Message::EventOccurred)
     }
 
-    fn new(_flags: ()) -> (Mainstruct, Command<Message>) {
+    fn new(self, _flags: ()) -> (Mainstruct, Command<Message>) {
+        initalise(self);
         return (Mainstruct::default(), Command::none());
     }
 
@@ -83,9 +86,6 @@ impl Application for Mainstruct {
             Message::LetterPressed(string) => pushfn(self, string),
             Message::EventOccurred(event) => {
                 match event {
-                    Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Space, modifiers: _ }) => {
-                        pushfn(self, String::from(" "));
-                    },
                     Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::LShift, modifiers: _ }) => {
                         shiftvaluefn(self);
                     },
@@ -97,6 +97,9 @@ impl Application for Mainstruct {
                     },
                     Event::Keyboard(keyboard::Event::KeyReleased { key_code: keyboard::KeyCode::Backspace, modifiers: _ }) => {
                         popfn(self);
+                    }
+                    Event::Keyboard(keyboard::Event::CharacterReceived(char)) => {
+                        pushfn(self, String::from(char))
                     }
                     _ => (),
                 }

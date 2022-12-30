@@ -12,7 +12,7 @@ pub fn mainscreen(selfx: &mut Mainstruct) -> Element<Message>{
     loadsizes(selfx);
     loadhashmaps(selfx);
     loaddata(selfx);
-    selfx.colour = thread_rng().gen_range(0..selfx.english.len().try_into().unwrap());
+    selfx.colour = thread_rng().gen_range(0..selfx.langonevec.len().try_into().unwrap());
     let title = h1(selfx.settings_usize[2],String::from("October"));
     let [state0, state1, state2] = selfx.button_states.get_many_mut(["gotosetting", "gotolang", "gotodata"]).unwrap();
 

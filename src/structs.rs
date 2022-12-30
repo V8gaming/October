@@ -45,8 +45,8 @@ pub struct Mainstruct {
     pub settings_bool: Vec<bool>,
     pub settings_language: HashMap<&'static str, String>,
     pub letters: Vec<String>,
-    pub english: Vec<String>,
-    pub vietnamese: Vec<String>,
+    pub langonevec: Vec<String>,
+    pub langtwovec: Vec<String>,
     pub langone: Vec<&'static str>,
     pub langtwo: Vec<&'static str>,
     pub punctuation: [&'static str; 8],
@@ -86,11 +86,11 @@ impl Default for Mainstruct {
                 let vec: Vec<String> = Vec::new();
                 vec
             },
-            english: {
+            langonevec: {
                 let vec: Vec<String> = Vec::new();
                 vec
             },
-            vietnamese: {
+            langtwovec: {
                 let vec: Vec<String> = Vec::new();
                 vec
             },

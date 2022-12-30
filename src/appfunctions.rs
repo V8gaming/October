@@ -7,7 +7,7 @@ use crate::load::{loaddata, read_languages_dir};
 pub fn nextfn(selfx: &mut Mainstruct) {
     selfx.time = Instant::now();
     //println!("{}", ENGLISH.lock_mut().unwrap().len());
-    selfx.word_index = thread_rng().gen_range(0..selfx.english.len().try_into().unwrap());
+    selfx.word_index = thread_rng().gen_range(0..selfx.langonevec.len().try_into().unwrap());
     selfx.letters.clear();
     selfx.colour = 0;
 
@@ -52,17 +52,26 @@ pub fn changelang(selfx: &mut Mainstruct, num: usize) {
     loaddata(selfx);
 }
 
+pub fn initalise(selfx: &mut Mainstruct) {
+    selfx.lang = 0;
+    selfx.table = 0;
+    loadlangsettings(selfx);
+    loadalphabet(selfx);
+    loadhashmaps(selfx);
+    loaddata(selfx);
+}
+
 pub fn shiftscreenfn(selfx: &mut Mainstruct,destination: usize) {
     selfx.time = Instant::now();
     selfx.screen = destination.try_into().unwrap();
-    selfx.word_index = thread_rng().gen_range(0..selfx.english.len().try_into().unwrap());
+    selfx.word_index = thread_rng().gen_range(0..selfx.langonevec.len().try_into().unwrap());
     selfx.letters.clear();
     selfx.colour = 0;
 }
 
 pub fn sumbitfn(selfx: &mut Mainstruct) {
     //println!("{:?}",LETTERS.lock_mut().unwrap().concat());
-    if format!("{}", selfx.letters.concat()) == selfx.vietnamese[selfx.word_index]{
+    if format!("{}", selfx.letters.concat()) == selfx.langtwovec[selfx.word_index]{
         //println!("true");
         selfx.colour = 2;
         selfx.screen = 2;

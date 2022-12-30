@@ -27,10 +27,10 @@ pub fn reviewscreen(selfx: &mut Mainstruct) -> Element<Message>{
     let response = h4(selfx.settings_usize[5],format!("{}", selfx.letters.concat()))
         .height(Length::Units(60))
         .color(colours[selfx.colour as usize]);
-    let langone = h4(selfx.settings_usize[5],format!("{}",selfx.english[selfx.word_index] ))
+    let langone = h4(selfx.settings_usize[5],format!("{}",selfx.langonevec[selfx.word_index] ))
         .height(Length::Units(60));
 
-    let langtwo = h4(selfx.settings_usize[5],format!("{}",selfx.vietnamese[selfx.word_index] ))
+    let langtwo = h4(selfx.settings_usize[5],format!("{}",selfx.langtwovec[selfx.word_index] ))
         .height(Length::Units(60));
 
     let resume = add_button(state1, String::from("Resume"), Message::ButtonPressed("Resume".to_string()), selfx.settings_usize[6]);
