@@ -1,13 +1,12 @@
 // settings.rs
-use std::collections::HashMap;
+use iced::{button, scrollable, slider};
 use serde_derive::Deserialize;
+use std::collections::HashMap;
 use std::time::Instant;
-use iced::{button, slider, scrollable};
-
 
 #[derive(Deserialize, Debug)]
 pub struct Data {
-    pub settings: Settings
+    pub settings: Settings,
 }
 
 #[derive(Deserialize, Debug)]
@@ -19,12 +18,10 @@ pub struct TextsizeData {
     pub body: usize,
 }
 
-
 #[derive(Deserialize, Debug)]
 pub struct SoundData {
     pub sound: bool,
     pub volume: usize,
-
 }
 
 #[derive(Deserialize, Debug)]
@@ -102,49 +99,35 @@ impl Default for Mainstruct {
                 let vec: Vec<usize> = Vec::new();
                 vec
             },
-            time: {
-                Instant::now()
-            },
-            langone: {
-                Vec::new()
-            },
-            langtwo: {
-                Vec::new()
-            },
-            punctuation: {
-                ["(",")", ";", ":", ",", ".", "?", "!"]
-            },
-            shift: {
-                false
-            },
-            colour: {
-                0
-            },
-            maxstates: {
-                0
-            },
-            word_index: {
-                0
-            },
-            screen: {
-                0
-            },
-            table: {
-                0
-            },
-            lang: {
-                0
-            },
+            time: { Instant::now() },
+            langone: { Vec::new() },
+            langtwo: { Vec::new() },
+            punctuation: { ["(", ")", ";", ":", ",", ".", "?", "!"] },
+            shift: { false },
+            colour: { 0 },
+            maxstates: { 0 },
+            word_index: { 0 },
+            screen: { 0 },
+            table: { 0 },
+            lang: { 0 },
             button_states: {
                 let mut map = HashMap::new();
-                
+
                 let list = [
-                    "gotomain", "gototesting","gotolang","gotosetting", "gotodata", 
-                    "shift", "next", "submit", "space", "delete", 
-                    "save"
+                    "gotomain",
+                    "gototesting",
+                    "gotolang",
+                    "gotosetting",
+                    "gotodata",
+                    "shift",
+                    "next",
+                    "submit",
+                    "space",
+                    "delete",
+                    "save",
                 ];
-                for i in list{
-                    map.insert(i,button::State::default());
+                for i in list {
+                    map.insert(i, button::State::default());
                 }
                 map
             },
@@ -164,11 +147,7 @@ impl Default for Mainstruct {
                 let map: HashMap<&str, button::State> = HashMap::new();
                 map
             },
-            language_states: {
-                let map = HashMap::new();
-                map
-                    
-            },
+            language_states: { HashMap::new() },
             table_states: {
                 let map: HashMap<String, button::State> = HashMap::new();
                 map

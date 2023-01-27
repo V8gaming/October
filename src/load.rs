@@ -1,11 +1,9 @@
+use crate::structs::SettingData;
 use crate::Data;
 use crate::Mainstruct;
-use crate::structs::SettingData;
-use std::{fs, path::Path};
 use iced::button;
 use sqlite::State as SqlState;
-
-
+use std::{fs, path::Path};
 pub fn read_languages_dir() -> Vec<Vec<String>> {
     let mut languages: Vec<Vec<String>> = Vec::new();
     let base_path = Path::new("./resources/languages");
@@ -14,18 +12,20 @@ pub fn read_languages_dir() -> Vec<Vec<String>> {
         let mut variables: Vec<String> = Vec::new();
         variables.resize(2, "".to_string());
         //println!("{}",&dir_path.display());
-        for file in fs::read_dir(dir_path).unwrap() { 
+        for file in fs::read_dir(dir_path).unwrap() {
             let file_path = file.unwrap().path();
             let file_name = file_path.file_name().unwrap().to_str().unwrap();
             //println!("{}",file_name);
 
             if file_name.ends_with(".sqlite3") {
-                variables.insert(0, file_path.display().to_string());
+                //println!("{}",&file_path.display().to_string());
+                variables[0] = file_path.display().to_string();
             } else if file_name.ends_with(".toml") {
-                variables.insert(1, file_path.display().to_string());
+                //println!("{}",&file_path.display().to_string());
+                variables[1] = file_path.display().to_string();
             }
         }
-
+        //println!("{:?}", &variables);
         languages.push(variables);
     }
 
@@ -36,29 +36,32 @@ pub fn read_languages_dir() -> Vec<Vec<String>> {
 pub fn loadamount() -> usize {
     let languages = read_languages_dir();
 
-/*     let mut x = 0;
+    /*     let mut x = 0;
     for i in &languages {
         println!("{} = {}", x, i[0]);
         x+=1;
     } */
     // Return the length of the list of languages
     languages.len()
-
 }
-pub fn loadalphabet(selfx: &mut Mainstruct){
-    let english = vec!["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"];
-    let vietnamese = vec![
-        "ẳ","á","â","à","ạ","ầ","ậ", "ấ","ả","ặ",
-        "đ",
-        "ỏ","ơ","ờ","ồ","ó","ô","ọ","ộ","ớ","ở",
-        "ư","ụ","ữ","ú", "ủ",
-        "í","ì","ị",
-        "ế","ẹ", "ể", "ề"
+pub fn loadalphabet(selfx: &mut Mainstruct) {
+    let english = vec![
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r",
+        "s", "t", "u", "v", "w", "x", "y", "z",
     ];
-    let greek = vec!["α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", "σ", "ς", "ϲ", "τ", "υ", "φ", "χ", "ψ", "ω"];
-    let cyrillic = vec!["а","б","в","г","д","е","ё","ж","з","и","й","к","л","м","н","о","п","р","с","т","у","ф","х","ц","ч","ш","щ","ъ","ы","ь","э","ю","я"];
-    
-    
+    let vietnamese = vec![
+        "ẳ", "á", "â", "à", "ạ", "ầ", "ậ", "ấ", "ả", "ặ", "đ", "ỏ", "ơ", "ờ", "ồ", "ó", "ô", "ọ",
+        "ộ", "ớ", "ở", "ư", "ụ", "ữ", "ú", "ủ", "í", "ì", "ị", "ế", "ẹ", "ể", "ề",
+    ];
+    let greek = vec![
+        "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", "σ",
+        "ς", "ϲ", "τ", "υ", "φ", "χ", "ψ", "ω",
+    ];
+    let cyrillic = vec![
+        "а", "б", "в", "г", "д", "е", "ё", "ж", "з", "и", "й", "к", "л", "м", "н", "о", "п", "р",
+        "с", "т", "у", "ф", "х", "ц", "ч", "ш", "щ", "ъ", "ы", "ь", "э", "ю", "я",
+    ];
+
     let alphabet: &str = selfx.settings_language.get("lang one alphabet").unwrap();
     match alphabet {
         "english" => selfx.langone = english.clone(),
@@ -75,7 +78,6 @@ pub fn loadalphabet(selfx: &mut Mainstruct){
         "cyrillic" => selfx.langone = cyrillic.clone(),
         _ => selfx.langtwo = english,
     }
-    
 }
 
 pub fn loadhashmaps(selfx: &mut Mainstruct) {
@@ -86,19 +88,19 @@ pub fn loadhashmaps(selfx: &mut Mainstruct) {
     for i in selfx.langone.iter() {
         selfx.lang_one_states.insert(i, button::State::default());
     }
-    
+
     // Add characters from LANGTWO to the map
     for i in selfx.langtwo.iter() {
         selfx.lang_two_states.insert(i, button::State::default());
     }
-    
+
     // Add characters from PUNCTUATION to the map
     for i in selfx.punctuation {
         selfx.punctuation_states.insert(i, button::State::default());
     }
     let mut vec = Vec::new();
     for i in 0..selfx.maxstates {
-        vec.push(format!("state{}",i));
+        vec.push(format!("state{i}"));
     }
     for i in vec {
         selfx.table_states.insert(i, button::State::default());
@@ -106,20 +108,20 @@ pub fn loadhashmaps(selfx: &mut Mainstruct) {
 
     let mut vec = Vec::new();
     for i in 0..loadamount() {
-        vec.push(format!("state{}",i));
+        vec.push(format!("state{i}"));
     }
     for i in vec {
         selfx.language_states.insert(i, button::State::default());
     }
-
 }
+
 pub fn loaddata(selfx: &mut Mainstruct) {
     let languages = read_languages_dir();
-    let connection = sqlite::open(format!("{}", languages[selfx.lang][0])).unwrap();
-    
+    let connection = sqlite::open(&languages[selfx.lang][0]).unwrap();
+
     let mut statement2 = connection
-    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
-    .unwrap();
+        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'")
+        .unwrap();
     let mut tables: Vec<String> = Vec::new();
 
     while let Ok(SqlState::Row) = statement2.next() {
@@ -148,7 +150,6 @@ pub fn loaddata(selfx: &mut Mainstruct) {
         //println!("{}",i);
 
         selfx.langonevec.push(i);
-        
     }
     for i in langtwo {
         selfx.langtwovec.push(i)
@@ -159,12 +160,14 @@ pub fn loadsizes(selfx: &mut Mainstruct) {
     let languages = read_languages_dir();
     let mut templangvec = Vec::new();
     for i in languages {
-        let connection = sqlite::open(format!("{}", i[0])).unwrap();
+        let connection = sqlite::open(&i[0]).unwrap();
         let mut statement2 = connection
-        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
-        .unwrap();
+            .prepare(
+                "SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'",
+            )
+            .unwrap();
         let mut tables: Vec<String> = Vec::new();
-    
+
         while let Ok(SqlState::Row) = statement2.next() {
             //println!("{}", statement2.read::<String>(0).unwrap());
             tables.push(statement2.read::<String>(0).unwrap())
@@ -197,53 +200,56 @@ pub fn loadnames() -> Vec<String> {
             .to_string()
             .strip_prefix("./resources/languages/")
             .unwrap()
-            .to_string();    
-        languages.push
-        (
-            dir_path
-        )
+            .to_string();
+        languages.push(dir_path)
     }
-    languages.sort_by(|a,b| a.cmp(b));
-    return languages;
-
+    languages.sort();
+    languages
 }
 
 pub fn loadlangsettings(selfx: &mut Mainstruct) {
     let languages = read_languages_dir();
+    //println!("{languages:?}");
     let setting = Path::new(&languages[selfx.lang][1]);
-    
     let contents = fs::read_to_string(setting).unwrap();
     selfx.settings_language.clear();
     //println!("{}", contents);
     let data: SettingData = toml::from_str(&contents).unwrap();
 
-    selfx.settings_language.insert("author", data.metadata.author);
-    selfx.settings_language.insert("description", data.metadata.description);
-    selfx.settings_language.insert("last update", data.metadata.last_update);
+    selfx
+        .settings_language
+        .insert("author", data.metadata.author);
+    selfx
+        .settings_language
+        .insert("description", data.metadata.description);
+    selfx
+        .settings_language
+        .insert("last update", data.metadata.last_update);
     selfx.settings_language.insert("email", data.metadata.email);
     selfx.settings_language.insert("link", data.metadata.link);
-    selfx.settings_language.insert("lang one alphabet", data.language.first.alphabet);
-    selfx.settings_language.insert("lang two alphabet", data.language.second.alphabet);
-    
+    selfx
+        .settings_language
+        .insert("lang one alphabet", data.language.first.alphabet);
+    selfx
+        .settings_language
+        .insert("lang two alphabet", data.language.second.alphabet);
 }
 pub fn loadsettings(selfx: &mut Mainstruct) {
     let filename = "./settings.toml";
     let contents = fs::read_to_string(filename).unwrap();
     selfx.settings_bool.clear();
     selfx.settings_usize.clear();
-    
+
     let data: Data = toml::from_str(&contents).unwrap();
-    let boollist = 
-    [
+    let boollist = [
         data.settings.seperate_check_synonyms,
         data.settings.sound.sound,
-        data.settings.time.timed
+        data.settings.time.timed,
     ];
     for i in boollist {
         selfx.settings_bool.push(i);
     }
-    let usizelist = 
-    [
+    let usizelist = [
         data.settings.sound.volume,
         data.settings.time.length,
         data.settings.textsize.h1,
@@ -251,7 +257,6 @@ pub fn loadsettings(selfx: &mut Mainstruct) {
         data.settings.textsize.h3,
         data.settings.textsize.h4,
         data.settings.textsize.body,
-
     ];
     for i in usizelist {
         selfx.settings_usize.push(i);
@@ -259,34 +264,32 @@ pub fn loadsettings(selfx: &mut Mainstruct) {
 }
 pub fn loadsize(lang: usize) -> usize {
     let languages = read_languages_dir();
-    let connection = sqlite::open(format!("{}", languages[lang][0])).unwrap();
-    
+    let connection = sqlite::open(&languages[lang][0]).unwrap();
+
     let mut statement2 = connection
-    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
-    .unwrap();
+        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'")
+        .unwrap();
     let mut tables: Vec<String> = Vec::new();
 
     while let Ok(SqlState::Row) = statement2.next() {
         //println!("{}", statement2.read::<String>(0).unwrap());
         tables.push(statement2.read::<String>(0).unwrap())
     }
-    return tables.len();
+    tables.len()
 }
 
 pub fn tablenames(lang: usize) -> Vec<String> {
     let mut names: Vec<String> = Vec::new();
     let languages = read_languages_dir();
 
-    let connection = sqlite::open(format!("{}", languages[lang][0])).unwrap();
+    let connection = sqlite::open(&languages[lang][0]).unwrap();
     let mut statement2 = connection
-    .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'" )
-    .unwrap();
+        .prepare("SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'")
+        .unwrap();
 
     while let Ok(SqlState::Row) = statement2.next() {
         //println!("{}", statement2.read::<String>(0).unwrap());
         names.push(statement2.read::<String>(0).unwrap())
     }
-    return names;
-    
-
+    names
 }
